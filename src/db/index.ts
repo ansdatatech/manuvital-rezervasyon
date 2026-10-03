@@ -1,0 +1,1 @@
+import { neon } from '@neondatabase/serverless';import { drizzle } from 'drizzle-orm/neon-http';import * as schema from './schema';// .env dosyasındaki linki kullanarak Neon'a bağlanıyoruzconst sql = neon(import.meta.env.DATABASE_URL);// Drizzle ORM'i bu bağlantı ve yazdığımız şema ile başlatıyoruzexport const db = drizzle(sql, { schema });

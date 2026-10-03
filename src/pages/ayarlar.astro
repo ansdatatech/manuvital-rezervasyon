@@ -1,0 +1,484 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { decodeJwt } from 'jose';
+
+const token = Astro.cookies.get('auth_token')?.value;
+
+if (!token) {
+    return Astro.redirect('/');
+}
+
+// Güvenlik: Sadece YÖNETİCİ girebilir
+try {
+    const decoded = decodeJwt(token);
+    if (decoded.rol !== 'yonetici') {
+        return Astro.redirect('/');
+    }
+} catch (error) {
+    return Astro.redirect('/');
+}
+---
+
+<Layout title="Ayarlar ve İzinler | Manuvital Terapi Merkezi">
+
+    <div class="text-white p-2 d-flex justify-content-between align-items-center" style="background-color: #111; border-bottom: 3px solid var(--manu-gold);">
+        <div class="container d-flex justify-content-between align-items-center">
+            <span class="fw-bold" style="color: var(--manu-teal-light);"><i class="fa-solid fa-gear me-2"></i> SİSTEM AYARLARI VE YETKİLENDİRME</span>
+            <a href="/" class="btn btn-sm btn-outline-light"><i class="fa-solid fa-arrow-left me-1"></i> Panele Dön</a>
+        </div>
+    </div>
+
+    <div class="container mt-5">
+        <div class="row">
+            
+            <div class="col-md-5 mb-4">
+                <div class="card shadow-sm border-0 rounded-4 mb-4" style="border-left: 4px solid var(--manu-teal) !important;">
+                    <div class="card-header bg-white border-0 pt-4 pb-0">
+                        <h5 class="fw-bold" style="color: var(--manu-teal);"><i class="fa-solid fa-user-plus me-2"></i>Yeni Hesap Ekle</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="personelFormu">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small text-muted">Yetki Rolü</label>
+                                <select id="pRol" class="form-select border-secondary fw-bold text-dark">
+                                    <option value="sekreter">Sekreter (Ön Büro / Takvim Yönetimi)</option>
+                                    <option value="uzman">Uzman (Sadece Kendi Seansları)</option>
+                                    <option value="yonetici">Yönetici (Tam Yetki)</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small text-muted">Kullanıcı Adı (Sisteme Giriş İçin)</label>
+                                <input type="text" id="pKullaniciAdi" class="form-control" placeholder="Örn: irem_hoca" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small text-muted">Görünür İsim (Ad Soyad)</label>
+                                <input type="text" id="pAdSoyad" class="form-control" placeholder="Örn: İrem Bingöl" required>
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label fw-bold small text-muted">Geçici Şifre (En az 6 karakter içermeli!)</label>
+                                <input type="password" id="pSifre" class="form-control" placeholder="En az 6 karakter" required minlength="6">
+                            </div>
+                            <button type="submit" id="pKaydetBtn" class="btn text-white w-100 fw-bold shadow-sm py-2" style="background-color: var(--manu-teal);">HESAP OLUŞTUR</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-0 rounded-4" style="border-left: 4px solid var(--manu-gold) !important;">
+                    <div class="card-header bg-white border-0 pt-4 pb-0">
+                        <h5 class="fw-bold" style="color: var(--manu-gold);"><i class="fa-solid fa-clock me-2"></i>Klinik Çalışma Saatleri</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="saatAyarlariFormu">
+                            <input type="hidden" id="ayarId">
+                            <div class="row">
+                                <div class="col-6 mb-3">
+                                    <label class="form-label fw-bold small text-muted">Açılış Saati</label>
+                                    <input type="number" id="baslangicSaati" class="form-control fw-bold border-secondary" min="0" max="23" required>
+                                </div>
+                                <div class="col-6 mb-3">
+                                    <label class="form-label fw-bold small text-muted">Kapanış Saati</label>
+                                    <input type="number" id="bitisSaati" class="form-control fw-bold border-secondary" min="1" max="24" required>
+                                </div>
+                            </div>
+                            <button type="submit" id="saatKaydetBtn" class="btn text-white w-100 fw-bold shadow-sm py-2" style="background-color: var(--manu-gold);">
+                                <i class="fa-solid fa-save me-2"></i>SAATLERİ KAYDET
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-7 mb-4">
+                
+                <div class="card shadow-sm border-0 rounded-4 mb-4" style="background-color: #fcf8f2; border-top: 4px solid var(--manu-gold) !important;">
+                    <div class="card-header bg-transparent border-0 pt-4 pb-0 d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold m-0" style="color: #b88a44;"><i class="fa-solid fa-plane-departure me-2"></i>Tatil & İzin Yönetimi</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="izinFormu" class="row g-2 align-items-end mb-4">
+                            <div class="col-12 mb-2">
+                                <div class="btn-group w-100 shadow-sm" role="group">
+                                    <input type="radio" class="btn-check" name="izinTipi" id="tipTarih" value="tarih" checked autocomplete="off">
+                                    <label class="btn btn-outline-warning text-dark fw-bold" for="tipTarih">Tarih / Aralığı Belirle</label>
+
+                                    <input type="radio" class="btn-check" name="izinTipi" id="tipRutin" value="rutin" autocomplete="off">
+                                    <label class="btn btn-outline-warning text-dark fw-bold" for="tipRutin">Her Hafta (Rutin)</label>
+                                </div>
+                            </div>
+                            
+                            <!-- Tarih / Aralık Alanı -->
+                            <div class="col-md-4" id="tarihAlani">
+                                <label class="form-label fw-bold small text-muted">Başlangıç</label>
+                                <input type="date" id="izinTarihi" class="form-control border-warning" required>
+                            </div>
+                            <div class="col-md-4" id="tarihBitisAlani">
+                                <label class="form-label fw-bold small text-muted">Bitiş (Opsiyonel)</label>
+                                <input type="date" id="izinBitisTarihi" class="form-control border-warning">
+                            </div>
+                            
+                            <!-- Rutin Seçim Alanı -->
+                            <div class="col-md-8 d-none" id="rutinAlani">
+                                <label class="form-label fw-bold small text-muted">Hangi Gün?</label>
+                                <select id="izinGun" class="form-select border-warning">
+                                    <option value="1">Pazartesi</option>
+                                    <option value="2">Salı</option>
+                                    <option value="3">Çarşamba</option>
+                                    <option value="4">Perşembe</option>
+                                    <option value="5">Cuma</option>
+                                    <option value="6">Cumartesi</option>
+                                    <option value="0">Pazar</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-5 mt-2">
+                                <label class="form-label fw-bold small text-muted">Kim İzinde?</label>
+                                <select id="izinKapsam" class="form-select border-warning">
+                                    <option value="TUM">Tüm Klinik Kapalı</option>
+                                    <option value="huseyin">Hüseyin Hoca</option>
+                                    <option value="irem">İrem Hoca</option>
+                                    <option value="erdogan">Erdoğan Hoca</option>
+                                    <option value="muruvet">Mürüvet Hoca</option>
+                                </select>
+                            </div>
+                            <div class="col-md-5 mt-2">
+                                <label class="form-label fw-bold small text-muted">Sebep / Not</label>
+                                <input type="text" id="izinSebep" class="form-control border-warning" placeholder="Bayram, Senelik..." required>
+                            </div>
+                            <div class="col-md-2 mt-2">
+                                <button type="submit" id="izinKaydetBtn" class="btn btn-warning w-100 fw-bold shadow-sm" title="İzin Ekle"><i class="fa-solid fa-plus"></i></button>
+                            </div>
+                        </form>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle">
+                                <thead>
+                                    <tr>
+                                        <th class="text-muted small">Tip / Zaman</th>
+                                        <th class="text-muted small">İzinli Kişi</th>
+                                        <th class="text-muted small">Sebep</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="izinTabloGovdesi">
+                                    <tr><td colspan="4" class="text-center text-muted small py-2"><i class="fa-solid fa-spinner fa-spin me-2"></i>Yükleniyor...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-0 rounded-4">
+                    <div class="card-header bg-white border-0 pt-4 pb-0">
+                        <h5 class="fw-bold" style="color: var(--manu-teal);"><i class="fa-solid fa-users-gear me-2"></i>Sistem Kullanıcıları</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle m-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-4">İsim Soyisim</th>
+                                        <th>Kullanıcı Adı</th>
+                                        <th>Rol / Yetki</th>
+                                        <th class="text-end pe-4">İşlem</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="personelTabloGövdesi">
+                                    <tr><td colspan="4" class="text-center py-4 text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i> Yükleniyor...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- YÖNETİCİ ŞİFRE SIFIRLAMA MODALI -->
+    <div class="modal fade" id="adminSifreModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content rounded-4 border-0 shadow-lg">
+                <div class="modal-header rounded-top-4" style="background-color: var(--manu-gold);">
+                    <h6 class="modal-title fw-bold text-white"><i class="fa-solid fa-unlock-keyhole me-2"></i>Şifre Sıfırla</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="small text-muted mb-3"><strong><span id="sifirlanacakKisi"></span></strong> adlı kullanıcının şifresini yeniliyorsunuz.</p>
+                    <form id="adminSifreFormu">
+                        <input type="hidden" id="sifirlanacakId">
+                        <div class="mb-3">
+                            <input type="password" id="yeniSifreAdmin" class="form-control" placeholder="Yeni Şifre Belirleyin" required minlength="6">
+                        </div>
+                        <button type="submit" id="adminSifreKaydetBtn" class="btn text-white w-100 fw-bold" style="background-color: var(--manu-teal);">ŞİFREYİ GÜNCELLE</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</Layout>
+
+<script is:inline>
+    document.addEventListener("DOMContentLoaded", function() {
+        personelleriGetir();
+        ayarlariGetir(); 
+        izinleriGetir(); 
+
+        document.querySelectorAll('input[name="izinTipi"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                if(this.value === 'tarih') {
+                    document.getElementById('tarihAlani').classList.remove('d-none');
+                    document.getElementById('tarihBitisAlani').classList.remove('d-none');
+                    document.getElementById('izinTarihi').required = true;
+                    document.getElementById('rutinAlani').classList.add('d-none');
+                } else {
+                    document.getElementById('tarihAlani').classList.add('d-none');
+                    document.getElementById('tarihBitisAlani').classList.add('d-none');
+                    document.getElementById('izinTarihi').required = false;
+                    document.getElementById('rutinAlani').classList.remove('d-none');
+                }
+            });
+        });
+
+        document.getElementById('personelFormu').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('pKaydetBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> OLUŞTURULUYOR...';
+
+            try {
+                const response = await fetch('/api/kullanici', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        rol: document.getElementById('pRol').value,
+                        kullaniciAdi: document.getElementById('pKullaniciAdi').value,
+                        adSoyad: document.getElementById('pAdSoyad').value,
+                        sifre: document.getElementById('pSifre').value
+                    })
+                });
+
+                if (response.ok) {
+                    document.getElementById('personelFormu').reset();
+                    personelleriGetir();
+                    alert("Hesap başarıyla oluşturuldu!");
+                } else {
+                    const data = await response.json();
+                    alert(data.error || "Hata oluştu.");
+                }
+            } catch (err) {
+                alert("Sunucuya ulaşılamadı.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'HESAP OLUŞTUR';
+            }
+        });
+
+        document.getElementById('adminSifreFormu').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('adminSifreKaydetBtn');
+            btn.innerHTML = 'BEKLEYİN...'; btn.disabled = true;
+            
+            try {
+                const res = await fetch('/api/kullanici', {
+                    method: 'PUT', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        id: document.getElementById('sifirlanacakId').value,
+                        yeniSifre: document.getElementById('yeniSifreAdmin').value
+                    })
+                });
+                
+                if(res.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('adminSifreModal')).hide();
+                    alert("Kullanıcının şifresi başarıyla sıfırlandı!");
+                } else alert("Hata oluştu.");
+            } catch(err) { alert("Sunucu hatası."); } 
+            finally { btn.innerHTML = 'ŞİFREYİ GÜNCELLE'; btn.disabled = false; }
+        });
+
+        document.getElementById('saatAyarlariFormu').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('saatKaydetBtn');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>KAYDEDİLİYOR...'; 
+            btn.disabled = true;
+            
+            try {
+                const res = await fetch('/api/ayarlar-api', {
+                    method: 'PUT', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        id: document.getElementById('ayarId').value,
+                        baslangicSaati: document.getElementById('baslangicSaati').value,
+                        bitisSaati: document.getElementById('bitisSaati').value,
+                        alanSayisi: 4 
+                    })
+                });
+                if(res.ok) alert("Saatler güncellendi!");
+                else alert("Hata oluştu.");
+            } catch(err) { alert("Sunucu hatası"); } 
+            finally { btn.innerHTML = '<i class="fa-solid fa-save me-2"></i>SAATLERİ KAYDET'; btn.disabled = false; }
+        });
+        
+        // AKILLI İZİN EKLEME: Aralık seçilirse araya _ koyarak tek kayıt olarak gönderir
+        document.getElementById('izinFormu').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            let tip = document.querySelector('input[name="izinTipi"]:checked').value;
+            let deger = '';
+            
+            if (tip === 'tarih') {
+                const bas = document.getElementById('izinTarihi').value;
+                const bit = document.getElementById('izinBitisTarihi').value;
+                
+                if (bit && bit >= bas) {
+                    tip = 'aralik'; // Range kuralı
+                    deger = `${bas}_${bit}`;
+                } else {
+                    deger = bas; // Tek gün
+                }
+            } else {
+                deger = document.getElementById('izinGun').value;
+            }
+
+            const btn = document.getElementById('izinKaydetBtn');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/izinler', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ tip: tip, deger: deger, kapsam: document.getElementById('izinKapsam').value, sebep: document.getElementById('izinSebep').value })
+                });
+                if(res.ok) { 
+                    document.getElementById('izinSebep').value = ""; 
+                    document.getElementById('izinTarihi').value = ""; 
+                    document.getElementById('izinBitisTarihi').value = ""; 
+                    izinleriGetir(); 
+                } 
+                else alert("Hata oluştu.");
+            } catch(err) { alert("Sunucu hatası."); } 
+            finally { btn.innerHTML = '<i class="fa-solid fa-plus"></i>'; btn.disabled = false; }
+        });
+    });
+
+    async function izinleriGetir() {
+        const tbody = document.getElementById('izinTabloGovdesi');
+        try {
+            const res = await fetch('/api/izinler');
+            const izinler = await res.json();
+            tbody.innerHTML = '';
+
+            if(izinler.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted small py-2">Sistemde kayıtlı izin/tatil günü bulunmuyor.</td></tr>';
+                return;
+            }
+
+            const gunIsimleri = ["Her Pazar", "Her Pazartesi", "Her Salı", "Her Çarşamba", "Her Perşembe", "Her Cuma", "Her Cumartesi"];
+            
+            // ESKİ KAYITLAR (1,2,3) İÇİN DE YAMA (FALLBACK) EKLENDİ
+            const kisiIsimleri = {
+                "TUM": "Tüm Klinik Kapalı", 
+                "huseyin": "Hüseyin H.", "irem": "İrem H.", "erdogan": "Erdoğan H.", "muruvet": "Mürüvet H.",
+                "1": "Hüseyin H.", "2": "İrem H.", "3": "Erdoğan H.", "4": "Hacamat Odası"
+            };
+
+            izinler.forEach(iz => {
+                let zamanGosterim = '';
+                if (iz.tip === 'tarih') {
+                    zamanGosterim = `<span class="badge bg-secondary">${iz.deger}</span>`;
+                } else if (iz.tip === 'aralik') {
+                    const [bas, bit] = iz.deger.split('_');
+                    zamanGosterim = `<span class="badge bg-info text-dark">${bas} <i class="fa-solid fa-arrow-right mx-1"></i> ${bit}</span>`;
+                } else {
+                    zamanGosterim = `<span class="badge bg-primary">${gunIsimleri[iz.deger]}</span>`;
+                }
+
+                let kapsamGosterim = `<span class="fw-bold" style="color: var(--manu-teal);">${kisiIsimleri[iz.kapsam] || iz.kapsam}</span>`;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${zamanGosterim}</td>
+                        <td>${kapsamGosterim}</td>
+                        <td class="text-muted small">${iz.sebep}</td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-danger shadow-sm py-0 px-2" onclick="izinSil(${iz.id})" title="İzni Kaldır"><i class="fa-solid fa-times"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        } catch(err) { tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger small">Yüklenemedi.</td></tr>'; }
+    }
+
+    window.izinSil = async function(id) {
+        if(confirm("Bu izin/tatil kuralını kaldırmak istediğinize emin misiniz?")) {
+            try {
+                const res = await fetch(`/api/izinler?id=${id}`, { method: 'DELETE' });
+                if(res.ok) izinleriGetir();
+            } catch(err) { alert("Silinemedi."); }
+        }
+    }
+
+    async function ayarlariGetir() {
+        try {
+            const res = await fetch('/api/ayarlar-api');
+            if(res.ok) {
+                const data = await res.json();
+                document.getElementById('ayarId').value = data.id;
+                document.getElementById('baslangicSaati').value = data.baslangicSaati;
+                document.getElementById('bitisSaati').value = data.bitisSaati;
+            }
+        } catch (err) {}
+    }
+
+    async function personelleriGetir() {
+        const tbody = document.getElementById('personelTabloGövdesi');
+        try {
+            const response = await fetch('/api/kullanici');
+            const kullanicilar = await response.json();
+            
+            tbody.innerHTML = '';
+            kullanicilar.forEach(k => {
+                let rolBadge = k.rol === 'yonetici' ? '<span class="badge bg-danger">Yönetici</span>' : 
+                               k.rol === 'sekreter' ? '<span class="badge bg-info text-dark">Sekreter</span>' : 
+                               '<span class="badge" style="background-color: var(--manu-teal);">Uzman</span>';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="ps-4 fw-bold text-dark">${k.adSoyad}</td>
+                    <td class="text-muted">@${k.kullaniciAdi}</td>
+                    <td>${rolBadge}</td>
+                    <td class="text-end pe-4">
+                        <button class="btn btn-sm btn-outline-warning me-1 shadow-sm" onclick="sifreSifirlaModalAc(${k.id}, '${k.adSoyad}')" title="Şifreyi Sıfırla"><i class="fa-solid fa-key"></i></button>
+                        <button class="btn btn-sm btn-outline-danger shadow-sm" onclick="personelSil(${k.id}, '${k.adSoyad}')" title="Kullanıcıyı Sil"><i class="fa-solid fa-trash-can"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (err) { tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Bağlantı hatası!</td></tr>'; }
+    }
+    window.sifreSifirlaModalAc = function(id, adSoyad) {
+        document.getElementById('sifirlanacakId').value = id;
+        document.getElementById('sifirlanacakKisi').innerText = adSoyad;
+        document.getElementById('yeniSifreAdmin').value = '';
+        
+        // Modalı aç
+        const modalEl = document.getElementById('adminSifreModal');
+        if(modalEl) {
+            const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            modalInstance.show();
+        }
+    };
+
+    window.personelSil = async function(id, adSoyad) {
+        if(confirm(`${adSoyad} adlı kişinin sisteme giriş yetkisini iptal etmek istediğinize emin misiniz?`)) {
+            try {
+                const response = await fetch(`/api/kullanici?id=${id}`, { method: 'DELETE' });
+                if (response.ok) {
+                    personelleriGetir(); // Tabloyu anında güncelle
+                } else {
+                    const data = await response.json();
+                    alert(data.error || "Silinemedi.");
+                }
+            } catch(err) {
+                alert("Hata oluştu, sunucuya ulaşılamadı.");
+            }
+        }
+    }
+</script>

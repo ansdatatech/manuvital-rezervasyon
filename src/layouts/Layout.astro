@@ -1,0 +1,184 @@
+---
+const { title } = Astro.props;
+---
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{title || 'Manuvital Terapi Merkezi'}</title>
+    
+    <!-- PWA BAĞLANTILARI -->
+    <meta name="theme-color" content="#1a7b83">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style is:global>
+        :root { 
+            --manu-teal: #1a7b83; 
+            --manu-teal-light: #309e9e; 
+            --manu-gold: #d9a554; 
+            --manu-bg: #f4f9f9; 
+        }
+        
+        body { font-family: 'Poppins', sans-serif; background-color: var(--manu-bg); padding-bottom: 50px; }
+        h1, h2, h3, .navbar-brand { font-family: 'Montserrat', sans-serif; font-weight: 700; }
+        
+        .navbar { background-color: var(--manu-teal); padding: 15px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .date-navigator { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin: 20px auto; display: flex; justify-content: space-between; align-items: center; max-width: 600px; border-bottom: 3px solid var(--manu-gold); }
+        .date-btn { background-color: #e9ecef; color: var(--manu-teal); border: none; padding: 10px 20px; border-radius: 10px; font-weight: bold; text-decoration: none; transition: 0.3s; z-index: 2; cursor: pointer; }
+        .date-btn:hover { background-color: var(--manu-teal); color: white; }
+        
+        .current-date { font-size: 1.2rem; font-weight: 700; color: var(--manu-teal); margin: 0; transition: 0.3s; cursor: pointer; }
+        .current-date:hover { color: var(--manu-gold); }
+
+        .table-container { background: white; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); overflow: hidden; }
+        .table-matrix { width: 100%; margin-bottom: 0; table-layout: fixed; }
+        .table-matrix th { background-color: var(--manu-teal); color: white; text-align: center; padding: 15px 5px; border: 1px solid rgba(255,255,255,0.1); font-size: 0.9rem; }
+        .table-matrix td { border: 1px solid #dee2e6; height: 75px; vertical-align: middle; text-align: center; padding: 5px; transition: 0.2s; }
+        
+        .time-cell { background-color: #f8f9fa; font-weight: 700; color: #333; font-size: 0.9rem; }
+        
+        .cell-empty { background-color: rgba(26, 123, 131, 0.03); cursor: pointer; position: relative; }
+        .cell-empty:hover { background-color: rgba(26, 123, 131, 0.15); }
+        .cell-empty i { color: var(--manu-teal); opacity: 0.3; font-size: 1.5rem; transition: 0.3s; }
+        .cell-empty:hover i { opacity: 1; transform: scale(1.2); color: var(--manu-gold); }
+        
+        .cell-full { background-color: #fdfaf4; border-left: 5px solid var(--manu-gold) !important; cursor: pointer; padding: 10px !important; transition: 0.2s; }
+        .cell-full:hover { background-color: #faebd2; }
+        .rez-name { font-weight: 800; font-size: 0.85rem; color: var(--manu-teal); display: block; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 2px; }
+        .rez-teacher { font-size: 0.7rem; color: #555; font-weight: 700; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 3px; }
+        .rez-note { font-size: 0.7rem; color: var(--manu-teal-light); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        
+        .cell-closed { background-color: #e9ecef; color: #6c757d; cursor: not-allowed; position: relative; padding: 10px !important; background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.03) 10px, rgba(0,0,0,0.03) 20px); border-left: 5px solid #6c757d !important; }
+        .closed-title { font-weight: 800; font-size: 0.85rem; display: block; line-height: 1.2; text-transform: uppercase; margin-bottom: 3px; }
+        .closed-reason { font-size: 0.7rem; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        @media (max-width: 768px) {
+            .table-matrix th { font-size: 0.6rem; padding: 8px 1px; }
+            .time-cell { font-size: 0.65rem; width: 14% !important; padding: 2px;}
+            .rez-name, .closed-title { font-size: 0.65rem; white-space: normal; overflow: visible; word-wrap: break-word; }
+            .rez-teacher { font-size: 0.6rem; white-space: normal; overflow: visible; word-wrap: break-word; }
+            .rez-note, .closed-reason { display: none; } 
+            .date-btn { padding: 6px 10px; font-size: 0.75rem; }
+            .current-date { font-size: 0.9rem; }
+            .table-container { overflow-x: hidden; } 
+            .table-matrix { min-width: 100%; } 
+            .cell-full, .cell-closed { padding: 4px !important; }
+        }
+
+        /* PWA POP-UP ANİMASYONU */
+        @keyframes slideUp {
+            from { transform: translate(-50%, 150%); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
+        }
+        .pwa-popup-show {
+            display: block !important;
+            animation: slideUp 0.6s ease-out forwards;
+        }
+    </style>
+</head>
+<body>
+    <slot />
+
+    <!-- AKILLI PWA KURULUM PENCERESİ (YENİ) -->
+    <div id="pwaInstallPrompt" class="position-fixed bottom-0 start-50 translate-middle-x w-100 p-3" style="max-width: 450px; z-index: 1050; display: none;">
+        <div class="card shadow-lg border-0 rounded-4" style="background-color: white; border-top: 4px solid var(--manu-teal) !important;">
+            <div class="card-body d-flex align-items-center justify-content-between p-3">
+                <div class="d-flex align-items-center gap-3">
+                    <img src="/logo.png" alt="Manuvital" style="width: 42px; height: auto; object-fit: contain;">
+                    <div>
+                        <h6 class="fw-bold mb-1" style="color: var(--manu-teal);">Manuvital Uygulaması</h6>
+                        <small class="text-muted d-block lh-sm" id="pwaInstallText">Daha hızlı erişim için telefonunuza veya tabletinize kurun.</small>
+                    </div>
+                </div>
+                <div class="d-flex flex-column gap-1 ms-2 flex-shrink-0">
+                    <button id="pwaInstallBtn" class="btn btn-sm text-white fw-bold px-3 py-1" style="background-color: var(--manu-teal);">Kur</button>
+                    <button id="pwaCloseBtn" class="btn btn-sm text-muted p-0 border-0 bg-transparent" style="font-size: 0.75rem;">Şimdi Değil</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- PWA SERVICE WORKER & KURULUM YÖNETİCİSİ -->
+    <script is:inline>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(() => {});
+            });
+        }
+
+        // PWA POP-UP MANTIĞI
+        document.addEventListener("DOMContentLoaded", () => {
+            let deferredPrompt;
+            const pwaPrompt = document.getElementById('pwaInstallPrompt');
+            const installBtn = document.getElementById('pwaInstallBtn');
+            const closeBtn = document.getElementById('pwaCloseBtn');
+            const installText = document.getElementById('pwaInstallText');
+
+            // Cihazın kendi uygulaması içinde çalışıp çalışmadığını kontrol et
+            const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+            const hasClosedPrompt = localStorage.getItem('manuvitalPwaClosed');
+
+            // iOS Safari Tespiti
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+            if (isIOS && !isStandalone && !hasClosedPrompt) {
+                // iPhone/iPad için yönlendirici metin
+                installText.innerHTML = "Kurmak için alttaki <b>[<i class='fa-solid fa-arrow-up-from-bracket'></i>] Paylaş</b> butonuna basıp<br><b>Ana Ekrana Ekle</b>'yi seçin.";
+                installBtn.style.display = 'none'; // iOS otomatik butona izin vermez
+                
+                setTimeout(() => {
+                    pwaPrompt.classList.add('pwa-popup-show');
+                }, 2000);
+            }
+
+            // Android Chrome Tespiti
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault(); // Varsayılan çirkin pencereyi engelle
+                deferredPrompt = e;
+                
+                if (!hasClosedPrompt && !isStandalone) {
+                    setTimeout(() => {
+                        pwaPrompt.classList.add('pwa-popup-show');
+                    }, 2000);
+                }
+            });
+
+            // Android Kur Butonuna Basıldığında
+            installBtn.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt(); // Android sistem penceresini tetikle
+                    const { outcome } = await deferredPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                        pwaPrompt.classList.remove('pwa-popup-show');
+                        pwaPrompt.style.display = 'none';
+                    }
+                    deferredPrompt = null;
+                }
+            });
+
+            // Kullanıcı Şimdi Değil derse
+            closeBtn.addEventListener('click', () => {
+                pwaPrompt.classList.remove('pwa-popup-show');
+                pwaPrompt.style.display = 'none';
+                localStorage.setItem('manuvitalPwaClosed', 'true'); // Hafızaya al, bir daha rahatsız etme
+            });
+        });
+    </script>
+</body>
+</html>

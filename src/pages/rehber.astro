@@ -1,0 +1,338 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { decodeJwt } from 'jose';
+
+const token = Astro.cookies.get('auth_token')?.value;
+if (!token) return Astro.redirect('/');
+
+let rol = '';
+try {
+    const decoded = decodeJwt(token);
+    rol = decoded.rol as string;
+    if (rol !== 'yonetici' && rol !== 'sekreter') {
+        return Astro.redirect('/');
+    }
+} catch (error) {
+    return Astro.redirect('/');
+}
+---
+
+<Layout title="Danışan Rehberi | Manuvital Terapi Merkezi">
+
+    <style is:global>
+        :root {
+            --manu-teal: #1a7b83;       
+            --manu-teal-light: #309e9e; 
+            --manu-gold: #d9a554; 
+            --manu-hacamat: #8c3a3a;      
+            --manu-bg: #f4f9f9;         
+        }
+        
+        .avatar-circle {
+            width: 42px;
+            height: 42px;
+            background-color: var(--manu-teal-light);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1rem;
+            letter-spacing: 1px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            flex-shrink: 0;
+        }
+
+        /* SELECT OK İŞARETİNİ GİZLEME */
+        select.hoca-select {
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            appearance: none !important;
+            background-image: none !important;
+            cursor: pointer;
+        }
+    </style>
+
+    <div class="text-white p-2 d-flex justify-content-between align-items-center" style="background-color: #111; border-bottom: 3px solid var(--manu-gold);">
+        <div class="container d-flex justify-content-between align-items-center">
+            <span class="fw-bold" style="color: var(--manu-teal-light);"><i class="fa-solid fa-address-book me-2"></i> DANIŞAN REHBERİ (CRM)</span>
+            <a href="/" class="btn btn-sm btn-outline-light"><i class="fa-solid fa-arrow-left me-1"></i> Panele Dön</a>
+        </div>
+    </div>
+
+    <div class="container mt-4 mb-5">
+        <div class="card shadow-sm border-0 rounded-4" style="border-top: 4px solid var(--manu-teal) !important;">
+            
+            <div class="card-header bg-white border-0 pt-4 pb-3">
+                <div class="row align-items-center gy-3">
+                    <div class="col-md-4 d-flex align-items-center">
+                        <h5 class="fw-bold m-0 text-dark"><i class="fa-solid fa-users me-2" style="color: var(--manu-teal);"></i>Kayıtlı Danışanlar</h5>
+                        <span class="badge ms-2" style="background-color: var(--manu-gold);" id="toplamKisiBadge">0 Kişi</span>
+                    </div>
+                    
+                    <div class="col-md-8 d-flex flex-column flex-md-row justify-content-md-end align-items-center gap-2">
+                        <!-- YENİ: BİRLEŞTİRİLMİŞ ARAMA VE UZMAN FİLTRESİ -->
+                        <div class="input-group input-group-sm w-100" style="max-width: 450px;">
+                            <span class="input-group-text bg-white border-end-0" style="border-color: var(--manu-teal-light);"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                            <input type="text" id="aramaKutusu" class="form-control border-start-0 border-end-0" style="border-color: var(--manu-teal-light);" placeholder="İsim veya Telefon Ara...">
+                            <select id="hocaFiltresi" class="form-select border-start-0 fw-bold hoca-select text-center" style="border-color: var(--manu-teal-light); max-width: 140px; color: var(--manu-teal); background-color: #f8f9fa;">
+                                <option value="hepsi">Tüm Uzmanlar</option>
+                                <option value="Hüseyin H.">Hüseyin Hoca</option>
+                                <option value="İrem H.">İrem Hoca</option>
+                                <option value="Erdoğan H.">Erdoğan Hoca</option>
+                                <option value="Mürüvet H.">Mürüvet Hoca</option>
+                            </select>
+                        </div>
+
+                        <button class="btn btn-sm text-white fw-bold shadow-sm" style="background-color: var(--manu-teal);" onclick="csvIndir()">
+                            <i class="fa-solid fa-file-excel me-1"></i> Excel'e Aktar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle m-0">
+                        <thead class="table-light text-muted small text-uppercase">
+                            <tr>
+                                <th class="ps-4" style="width: 30%;">Danışan Adı Soyadı</th>
+                                <th style="width: 20%;">İletişim Numarası</th>
+                                <th style="width: 15%;">Cinsiyet</th>
+                                <th style="width: 20%;">Tercih Ettiği Uzmanlar</th>
+                                <th class="text-end pe-4" style="width: 15%;">Hızlı İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rehberTabloGövdesi">
+                            <tr><td colspan="5" class="text-center py-5 text-muted"><i class="fa-solid fa-spinner fa-spin me-2" style="color: var(--manu-teal);"></i> Yükleniyor...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</Layout>
+
+<script is:inline>
+    let tumMusteriler = [];
+    let aktifMusteriler = []; // YENİ: Şu an ekranda/filtrede görünen müşteriler (Excel için)
+    let musteriHocaGecmisi = {}; 
+    let musteriCinsiyetMap = {}; 
+
+    document.addEventListener("DOMContentLoaded", async () => {
+        try {
+            const [resRehber, resRez] = await Promise.all([
+                fetch('/api/rehber'),
+                fetch('/api/rezervasyon?tarih=hepsi')
+            ]);
+
+            if(resRehber.ok && resRez.ok) {
+                const rawMusteriler = await resRehber.json();
+                const tumRezervasyonlar = await resRez.json();
+                
+                tumRezervasyonlar.forEach(r => {
+                    const telTemiz = r.telefon ? r.telefon.replace(/\D/g, '') : '';
+                    const anahtar = telTemiz || r.kisiAdi.toLocaleLowerCase('tr-TR');
+                    
+                    if(!musteriHocaGecmisi[anahtar]) musteriHocaGecmisi[anahtar] = new Set();
+                    
+                    if (r.cinsiyet) {
+                        musteriCinsiyetMap[anahtar] = r.cinsiyet;
+                    }
+                    
+                    const odaNo = parseInt(r.alanId) || 1;
+                    const tur = (r.rezervasyonTuru || "").toLowerCase();
+                    
+                    let hocaAdi = "";
+                    if (odaNo === 1) hocaAdi = 'Hüseyin H.';
+                    else if (odaNo === 2) hocaAdi = 'İrem H.';
+                    else if (odaNo === 3) hocaAdi = 'Erdoğan H.';
+                    else if (odaNo === 4) {
+                        if (tur.includes('kadın') || tur.includes('kadin') || r.cinsiyet === 'kadin') hocaAdi = 'Mürüvet H.';
+                        else hocaAdi = 'Erdoğan H.';
+                    }
+                    
+                    if (hocaAdi) musteriHocaGecmisi[anahtar].add(hocaAdi);
+                });
+
+                const islenenAnahtarlar = new Set();
+                const tekillestirilmisMusteriler = [];
+
+                rawMusteriler.forEach(m => {
+                    const isimTemiz = isimFormatla(m.adSoyad);
+                    const telTemiz = m.telefon ? m.telefon.replace(/\D/g, '') : '';
+                    const benzersizAnahtar = telTemiz ? telTemiz : isimTemiz.toLocaleLowerCase('tr-TR');
+
+                    if (!islenenAnahtarlar.has(benzersizAnahtar)) {
+                        islenenAnahtarlar.add(benzersizAnahtar);
+                        tekillestirilmisMusteriler.push({
+                            adSoyad: isimTemiz,
+                            telefon: m.telefon,
+                            anahtar: benzersizAnahtar
+                        });
+                    }
+                });
+
+                tekillestirilmisMusteriler.sort((a, b) => a.adSoyad.localeCompare(b.adSoyad, 'tr'));
+                
+                tumMusteriler = tekillestirilmisMusteriler; 
+                aktifMusteriler = [...tumMusteriler];
+                tabloyuCiz(aktifMusteriler);
+            } else {
+                document.getElementById('rehberTabloGövdesi').innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Veri çekilemedi.</td></tr>`;
+            }
+        } catch (err) {
+            document.getElementById('rehberTabloGövdesi').innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Bağlantı hatası veya sunucu yanıt vermiyor!</td></tr>`;
+        }
+    });
+
+    // YENİ: BİRLEŞİK FİLTRELEME FONKSİYONU (Arama Metni + Uzman Seçimi)
+    function listeyiFiltrele() {
+        const kelime = document.getElementById('aramaKutusu').value.toLocaleLowerCase('tr-TR');
+        const secilenHoca = document.getElementById('hocaFiltresi').value;
+
+        aktifMusteriler = tumMusteriler.filter(m => {
+            const anahtar = m.anahtar;
+            
+            // 1. İsim veya Telefon eşleşmesi
+            const metinUyuyor = m.adSoyad.toLocaleLowerCase('tr-TR').includes(kelime) || (m.telefon && m.telefon.includes(kelime));
+            
+            // 2. Hoca eşleşmesi
+            let hocaUyuyor = true;
+            if (secilenHoca !== 'hepsi') {
+                const hocalarSet = musteriHocaGecmisi[anahtar];
+                hocaUyuyor = hocalarSet ? hocalarSet.has(secilenHoca) : false;
+            }
+
+            return metinUyuyor && hocaUyuyor;
+        });
+
+        tabloyuCiz(aktifMusteriler);
+    }
+
+    // Olay Dinleyicileri (Arama kutusuna yazıldığında veya hoca değiştiğinde tetiklenir)
+    document.getElementById('aramaKutusu').addEventListener('input', listeyiFiltrele);
+    document.getElementById('hocaFiltresi').addEventListener('change', listeyiFiltrele);
+
+    function isimFormatla(isim) {
+        if (!isim) return "";
+        const parcalar = isim.trim().split(/\s+/);
+        if (parcalar.length === 1) {
+            return parcalar[0].charAt(0).toLocaleUpperCase('tr-TR') + parcalar[0].slice(1).toLocaleLowerCase('tr-TR');
+        }
+        const sonKelime = parcalar.pop().toLocaleUpperCase('tr-TR');
+        const ilkKisim = parcalar.map(p => p.charAt(0).toLocaleUpperCase('tr-TR') + p.slice(1).toLocaleLowerCase('tr-TR')).join(' ');
+        return ilkKisim + ' ' + sonKelime;
+    }
+
+    function basHarfleriAl(isim) {
+        if (!isim) return "M"; 
+        const parcalar = isim.trim().split(/\s+/);
+        if (parcalar.length === 1) return parcalar[0].charAt(0).toLocaleUpperCase('tr-TR');
+        return (parcalar[0].charAt(0) + parcalar[parcalar.length - 1].charAt(0)).toLocaleUpperCase('tr-TR');
+    }
+
+    function telefonFormatla(tel) {
+        if (!tel) return '<span class="text-muted fst-italic">Belirtilmemiş</span>';
+        const temiz = tel.replace(/\D/g, '');
+        if (temiz.length === 11 && temiz.startsWith('0')) {
+            return `0(${temiz.substring(1,4)}) ${temiz.substring(4,7)} ${temiz.substring(7,9)} ${temiz.substring(9,11)}`;
+        }
+        return tel; 
+    }
+
+    function tabloyuCiz(liste) {
+        const tbody = document.getElementById('rehberTabloGövdesi');
+        tbody.innerHTML = '';
+        
+        document.getElementById('toplamKisiBadge').innerText = `${liste.length} Kişi`;
+        
+        if (liste.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-muted"><i class="fa-regular fa-folder-open fs-1 mb-3 d-block opacity-25"></i>Filtreye uygun kayıt bulunamadı.</td></tr>';
+            return;
+        }
+        
+        liste.forEach(m => {
+            const duzgunIsim = m.adSoyad;
+            const telTemiz = m.telefon ? m.telefon.replace(/\D/g,'') : '';
+            const anahtar = m.anahtar; 
+            
+            const formatliTel = telefonFormatla(m.telefon);
+            const telLink = m.telefon 
+                ? `<a href="tel:${telTemiz}" class="text-decoration-none fw-bold" style="color: var(--manu-teal); letter-spacing: 0.5px;">${formatliTel}</a>` 
+                : formatliTel;
+            
+            const cinsiyet = musteriCinsiyetMap[anahtar];
+            let cinsiyetHtml = '<span class="text-muted small fst-italic">-</span>';
+            if (cinsiyet === 'kadin') {
+                cinsiyetHtml = '<span class="badge bg-pink text-dark border" style="background-color: #ffd1dc !important;">Kadın</span>';
+            } else if (cinsiyet === 'erkek') {
+                cinsiyetHtml = '<span class="badge bg-info bg-opacity-75 text-dark">Erkek</span>';
+            }
+
+            const hocalarSet = musteriHocaGecmisi[anahtar];
+            let hocalarHtml = '<span class="text-muted small fst-italic">-</span>';
+            if (hocalarSet && hocalarSet.size > 0) {
+                hocalarHtml = Array.from(hocalarSet).map(h => {
+                    let badgeColor = "bg-secondary";
+                    if(h.includes("Hüseyin")) badgeColor = "bg-info text-dark";
+                    if(h.includes("İrem")) badgeColor = "bg-primary";
+                    if(h.includes("Erdoğan")) badgeColor = "bg-warning text-dark";
+                    if(h.includes("Mürüvet")) badgeColor = "bg-danger";
+                    return `<span class="badge ${badgeColor} bg-opacity-75 me-1 fw-normal">${h}</span>`;
+                }).join('');
+            }
+
+            const aramaBtn = m.telefon ? `<a href="tel:${telTemiz}" class="btn btn-sm btn-outline-secondary shadow-sm me-1" title="Hemen Ara"><i class="fa-solid fa-phone"></i></a>` : '';
+            const wpBtn = m.telefon ? `<a href="https://wa.me/${telTemiz}" target="_blank" class="btn btn-sm btn-success shadow-sm" title="WhatsApp'tan Mesaj Yaz"><i class="fa-brands fa-whatsapp"></i></a>` : '';
+            
+            const avatarRenk = m.adSoyad.length % 2 === 0 ? "var(--manu-teal-light)" : "var(--manu-gold)";
+            
+            tbody.innerHTML += `
+                <tr>
+                    <td class="ps-4">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-circle me-3" style="background-color: ${avatarRenk};">${basHarfleriAl(duzgunIsim)}</div>
+                            <div class="fw-bold text-dark fs-6">${duzgunIsim}</div>
+                        </div>
+                    </td>
+                    <td>${telLink}</td>
+                    <td>${cinsiyetHtml}</td>
+                    <td>${hocalarHtml}</td>
+                    <td class="text-end pe-4">${aramaBtn} ${wpBtn}</td>
+                </tr>
+            `;
+        });
+    }
+
+    window.csvIndir = function() {
+        if(!aktifMusteriler || aktifMusteriler.length === 0) { alert("İndirilecek kayıt bulunamadı."); return; }
+        
+        // Hangi hoca seçiliyse Excel dosyasının adı o olsun
+        const secilenHoca = document.getElementById('hocaFiltresi').value;
+        const dosyaAdi = secilenHoca === 'hepsi' 
+            ? `Manuvital_Tüm_Rehber_${new Date().toISOString().slice(0,10)}.csv`
+            : `Manuvital_${secilenHoca.replace(' H.', '')}_Danisanlari_${new Date().toISOString().slice(0,10)}.csv`;
+
+        let csvContent = "data:text/csv;charset=utf-8,\uFEFFDanışan Adı Soyadı,Telefon Numarası,Cinsiyet,Tercih Edilen Uzmanlar\n";
+        
+        // YENİ: tumMusteriler yerine aktifMusteriler (filtrelenmiş liste) yazdırılıyor
+        aktifMusteriler.forEach(k => {
+            const tel = k.telefon ? k.telefon : "Belirtilmemiş";
+            const cinsiyetStr = musteriCinsiyetMap[k.anahtar] === 'kadin' ? 'Kadın' : (musteriCinsiyetMap[k.anahtar] === 'erkek' ? 'Erkek' : '-');
+            const hocaListesi = musteriHocaGecmisi[k.anahtar] ? Array.from(musteriHocaGecmisi[k.anahtar]).join(' / ') : '-';
+            
+            csvContent += `"${k.adSoyad}","${tel}","${cinsiyetStr}","${hocaListesi}"\n`;
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", dosyaAdi);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+</script>

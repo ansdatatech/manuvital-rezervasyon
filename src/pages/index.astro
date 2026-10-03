@@ -1,0 +1,907 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { decodeJwt } from 'jose';
+
+const token = Astro.cookies.get('auth_token')?.value;
+const isLoggedIn = !!token;
+
+let rol = '';
+let aktifRol = ''; 
+let aktifKullanici = '';
+
+if (token) {
+    try {
+        const decoded = decodeJwt(token);
+        rol = decoded.rol as string;
+        aktifRol = decoded.rol as string; 
+        aktifKullanici = decoded.kullaniciAdi as string;
+    } catch (error) {}
+}
+---
+
+<Layout title="Manuvital Terapi Merkezi | Rezervasyon Sistemi">
+
+    <style is:global>
+        :root {
+            --manu-teal: #1a7b83;       
+            --manu-teal-light: #309e9e; 
+            --manu-gold: #d9a554; 
+            --manu-hacamat: #8c3a3a;      
+            --manu-bg: #f4f9f9;         
+        }
+        
+        .btn-manu { background-color: var(--manu-teal); color: white; border: none; }
+        .btn-manu:hover { background-color: #125c63; color: white; }
+        
+        .th-oda-1 { background-color: var(--manu-teal) !important; color: white !important; border-bottom: 3px solid #125c63 !important; }
+        .th-oda-2 { background-color: var(--manu-teal-light) !important; color: white !important; border-bottom: 3px solid #238080 !important; }
+        .th-oda-3 { background-color: var(--manu-gold) !important; color: white !important; border-bottom: 3px solid #b88a44 !important; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
+        .th-oda-4 { background-color: var(--manu-hacamat) !important; color: white !important; border-bottom: 3px solid #5c2424 !important; }
+        
+        /* TÜM SELECT KUTULARININ OK İŞARETLERİNİ TAMAMEN GİZLEME */
+        select {
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            appearance: none !important;
+            background-image: none !important;
+        }
+
+        select::-ms-expand {
+            display: none !important;
+        }
+        
+        select:disabled {
+            background-color: #e9ecef !important;
+            border-color: #ced4da !important;
+            color: #495057 !important;
+            opacity: 1;
+            cursor: not-allowed;
+        }
+    </style>
+
+    {!isLoggedIn ? (
+        <div id="loginEkrani" class="position-fixed w-100 h-100 d-flex flex-column justify-content-center align-items-center" style="background-color: var(--manu-teal); z-index: 9999; top: 0; left: 0;">
+            <div class="card shadow-lg border-0 rounded-4 mb-3" style="width: 100%; max-width: 420px;">
+                <div class="card-body p-5 text-center">
+                    <img src="/logo.png" alt="Manuvital Terapi Merkezi" style="max-height: 130px; width: auto;" class="mb-3 drop-shadow">
+                    <h4 class="fw-bold mb-4" style="color: var(--manu-teal);">Manuvital Terapi Merkezi<br><span class="fs-5 text-muted">Rezervasyon Sistemi</span></h4>
+                    <form id="loginForm">
+                        <div class="form-floating mb-3 text-start">
+                            <input type="text" class="form-control fw-bold border-secondary" id="kullaniciAdi" placeholder="Kullanıcı Adı" required>
+                            <label for="kullaniciAdi"><i class="fa-solid fa-user text-muted me-1"></i> Kullanıcı Adı</label>
+                        </div>
+                        <div class="form-floating mb-4 text-start">
+                            <input type="password" class="form-control fw-bold border-secondary" id="sifre" placeholder="Şifre" required>
+                            <label for="sifre"><i class="fa-solid fa-lock text-muted me-1"></i> Şifre</label>
+                        </div>
+                        <button type="submit" id="loginBtn" class="btn btn-manu w-100 py-3 fw-bold fs-5 rounded-3 shadow-sm">GİRİŞ YAP</button>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="text-center text-white-50 mt-3" style="opacity: 0.8;">
+                <small class="text-uppercase" style="letter-spacing: 1px; font-size: 0.7rem;">Yazılım ve Altyapı</small><br>
+                <div class="d-flex align-items-center justify-content-center mt-1 gap-2">
+                    <img src="/ans-logo.png" alt="ANS DataTech" style="height: 24px;" onerror="this.style.display='none'">
+                    <span class="fw-bold text-white fs-6" style="letter-spacing: 0.5px;">ANS DataTech</span>
+                </div>
+            </div>
+        </div>
+    ) : (
+        <div id="anaSistem" style="background-color: var(--manu-bg); min-height: 100vh;">
+            <div id="authVerileri" data-kullanici={aktifKullanici} data-rol={aktifRol} class="d-none"></div>
+
+            <div class="text-white p-2 d-flex justify-content-center align-items-center gap-3" style="background-color: #111; border-bottom: 3px solid var(--manu-gold);">
+                <span class="badge text-white" style="background-color: var(--manu-teal);"><i class="fa-solid fa-cloud-check me-1"></i> MANUVITAL SİSTEMİ AKTİF</span>
+            </div>
+
+            <nav class="navbar navbar-dark shadow-sm" style="background-color: var(--manu-teal);">
+                <div class="container d-flex justify-content-between align-items-center">
+                    <div class="navbar-brand m-0 fw-bold fs-5 d-flex align-items-center" id="navbar-title">
+                        <div class="bg-white rounded p-1 me-2 d-flex align-items-center shadow-sm">
+                            <img src="/logo.png" alt="Manuvital" style="max-height: 38px;">
+                        </div>
+                        <span class="d-none d-sm-inline">MANUVITAL REZERVASYON</span>
+                    </div>
+                    <button type="button" id="cikisBtn" class="btn btn-outline-light btn-sm fw-bold border-2">
+                        <i class="fa-solid fa-power-off"></i> <span class="d-none d-md-inline">Çıkış</span>
+                    </button>
+                </div>
+            </nav>
+            
+            <div class="container mt-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center p-3 bg-white shadow-sm rounded-4 border-start border-4 gap-2" style="border-color: var(--manu-gold) !important;">
+                    <div class="text-muted text-uppercase">
+                        <i class="fa-solid fa-user-tie me-1" style="color: var(--manu-teal);"></i> <strong>{aktifRol}:</strong> {aktifKullanici}
+                    </div>
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                        
+                        <!-- YENİ: YARININ HATIRLATMALARI BUTONU -->
+                        {rol !== 'uzman' && (
+                            <button id="hatirlatmaBtn" class="btn btn-sm btn-success fw-bold shadow-sm" onclick="window.yarinHatirlatmalariAc()">
+                                <i class="fa-brands fa-whatsapp"></i> Yarının Hatırlatmaları
+                            </button>
+                        )}
+
+                        <button class="btn btn-sm btn-outline-secondary fw-bold shadow-sm" onclick="new bootstrap.Modal(document.getElementById('sifreModal')).show()">
+                            <i class="fa-solid fa-key"></i> Şifre Değiştir
+                        </button>
+                        
+                        {aktifRol === 'yonetici' && (
+                            <a href="/ayarlar" class="btn btn-sm btn-secondary fw-bold shadow-sm">
+                                <i class="fa-solid fa-gear"></i> Ayarlar
+                            </a>
+                        )}
+
+                        {aktifRol === 'yonetici' && (
+                            <a href="/istatistik" class="btn btn-sm text-white fw-bold shadow-sm" style="background-color: var(--manu-teal-light);">
+                                <i class="fa-solid fa-chart-pie me-1"></i> İstatistik
+                            </a>
+                        )}
+
+                        {rol !== 'uzman' && (
+                            <a href="/rehber" class="btn btn-sm btn-outline-dark fw-bold shadow-sm">
+                                <i class="fa-solid fa-address-book" style="color: var(--manu-gold);"></i> Rehber
+                            </a>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            <div class="container mt-3">
+                <div class="date-navigator shadow-sm rounded-4 bg-white mb-3">
+                    <button type="button" id="dunBtn" class="date-btn text-muted"><i class="fa-solid fa-chevron-left"></i> Dün</button>
+                    <div style="position: relative; flex-grow: 1; text-align: center; cursor: pointer;" id="tarihSeciciAlan">
+                        <h3 class="current-date" style="color: var(--manu-teal);">
+                            <i class="fa-regular fa-calendar-days me-2"></i>
+                            <span id="gosterilenTarih"></span>
+                            <i class="fa-solid fa-caret-down ms-2" style="font-size: 0.8rem; opacity: 0.5;"></i>
+                        </h3>
+                        <input type="date" id="gizliTakvim" style="position: absolute; top: 0; left: 50%; opacity: 0; width: 1px; height: 1px; border: none; pointer-events: none;">
+                    </div>
+                    <button type="button" id="yarinBtn" class="date-btn text-muted">Yarın <i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+
+                <div class="table-container shadow-sm rounded-4 bg-white overflow-hidden">
+                    <table class="table-matrix mb-0">
+                        <thead>
+                            <tr id="tabloBaslikKismi">
+                                <th style="width: 8%; background-color: #333; color: white;"><i class="fa-regular fa-clock"></i></th>
+                                <th style="width: 23%;" class="th-oda-1 align-middle text-center">ODA 1<br><small class="fw-normal opacity-75">(Hüseyin Hoca)</small></th>
+                                <th style="width: 23%;" class="th-oda-2 align-middle text-center">ODA 2<br><small class="fw-normal opacity-75">(İrem Hoca)</small></th>
+                                <th style="width: 23%;" class="th-oda-3 align-middle text-center">ODA 3<br><small class="fw-normal opacity-75">(Erdoğan Hoca)</small></th>
+                                <th style="width: 23%;" class="th-oda-4 align-middle text-center">ODA 4<br><small class="fw-normal opacity-75">(Hacamat Odası)</small></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabloGövdesi">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="container mt-4 mb-3 pb-3">
+                <div class="d-flex flex-column justify-content-center align-items-center text-muted" style="opacity: 0.5;">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <img src="/ans-logo.png" alt="ANS DataTech" style="height: 18px; filter: grayscale(100%);" onerror="this.style.display='none'">
+                        <span class="fw-bold" style="letter-spacing: 0.5px;">ANS DataTech</span>
+                    </div>
+                    <small style="font-size: 0.75rem;">Yazılım ve Veri Analitik Çözümleri</small>
+                </div>
+            </div>
+            
+            <!-- RANDEVU EKLEME MODALI -->
+            <div class="modal fade" id="rezModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content rounded-4 border-0 shadow-lg">
+                        <div class="modal-header" style="background-color: var(--manu-teal); color: white; border-radius: 15px 15px 0 0;">
+                            <h5 class="modal-title fw-bold" id="rezModalBaslik"><i class="fa-solid fa-calendar-plus text-warning me-2"></i>Yeni Randevu</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <div class="alert py-3 mb-4 text-center fs-5" style="border-left: 5px solid var(--manu-gold); background-color: #f8f9fa;">
+                                <div class="fw-bold mb-2" style="color: var(--manu-teal);"><i class="fa-regular fa-calendar-check me-1"></i> <span id="modalTarihMetni"></span></div>
+                                <span class="badge fs-6 me-2 shadow-sm" style="background-color: var(--manu-teal);" id="modalSaatBadge"></span> 
+                                <span class="badge fs-6 shadow-sm" style="background-color: var(--manu-gold); color: #fff;" id="modalKortBadge"></span>
+                            </div>
+                            <form id="kayitFormu">
+                                <input type="hidden" id="editKayitId">
+                                <input type="hidden" id="kayitSaat">
+                                <input type="hidden" id="kayitKort">
+                                
+                                <div class="mb-3 p-3 bg-light rounded-3 border border-secondary border-opacity-25">
+                                    <label class="form-label fw-bold text-dark small mb-2">Terapi / İşlem Türü</label>
+                                    <select id="kayitTuru" class="form-select border-secondary fw-bold text-secondary">
+                                    </select>
+                                </div>
+
+                                <div class="mb-3 p-3 bg-light rounded-3 border border-secondary border-opacity-25">
+                                    <label class="form-label fw-bold text-dark small mb-2"><i class="fa-solid fa-venus-mars me-1" style="color: var(--manu-teal);"></i> Danışan Cinsiyeti</label>
+                                    <div class="d-flex gap-4">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="cinsiyetSecim" id="cinsiyetErkek" value="erkek" checked>
+                                            <label class="form-check-label fw-bold text-secondary" for="cinsiyetErkek">Erkek</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="cinsiyetSecim" id="cinsiyetKadin" value="kadin">
+                                            <label class="form-check-label fw-bold text-secondary" for="cinsiyetKadin">Kadın</label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3 position-relative">
+                                    <label class="form-label fw-bold text-muted small">Hizmeti Verecek Uzman</label>
+                                    <select id="kayitUzman" class="form-select form-control-lg bg-light fw-bold" style="border-color: var(--manu-teal);">
+                                    </select>
+                                </div>
+
+                                <div class="mb-3 position-relative">
+                                    <label class="form-label fw-bold text-muted small">Danışan Adı Soyadı</label>
+                                    <input type="text" id="kayitAdi" class="form-control form-control-lg bg-light" style="border-color: var(--manu-teal);" placeholder="İsim Giriniz" autocomplete="off" required>
+                                    <ul id="isimOnerileri" class="list-group position-absolute w-100 shadow-sm d-none" style="z-index: 1000; top: 100%;"></ul>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold text-muted small"><i class="fa-brands fa-whatsapp me-1" style="color: var(--manu-teal);"></i> Telefon (05XX...)</label>
+                                    <input type="tel" id="kayitTelefon" class="form-control form-control-lg bg-light fw-bold" style="letter-spacing: 1px;" placeholder="05XX XXX XX XX" maxlength="14" required>
+                                </div>
+
+                                <button type="submit" id="kaydetBtn" class="btn btn-manu w-100 py-3 fw-bold fs-5 rounded-3 mt-2 shadow-sm">
+                                    <i class="fa-solid fa-check-double me-2"></i> KAYDET VE BİLDİR
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RANDEVU DETAY MODALI -->
+            <div class="modal fade" id="detayModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content rounded-4 border-0 shadow-lg">
+                        <div class="modal-header" style="background-color: var(--manu-teal); color: white; border-radius: 15px 15px 0 0;">
+                            <h5 class="modal-title fw-bold"><i class="fa-solid fa-circle-info text-warning me-2"></i>Randevu Detayı</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <div class="alert py-3 mb-4 text-center fs-5" style="border-left: 5px solid var(--manu-gold); background-color: #f8f9fa;">
+                                <div class="fw-bold mb-2" style="color: var(--manu-teal);"><i class="fa-regular fa-calendar-check me-1"></i> <span id="detayTarihMetni"></span></div>
+                                <span class="badge fs-6 me-2 shadow-sm" style="background-color: var(--manu-teal);" id="detaySaatBadge"></span> 
+                                <span class="badge fs-6 shadow-sm" style="background-color: var(--manu-gold); color: #fff;" id="detayKortBadge"></span>
+                            </div>
+                            <div class="mb-4 p-4 bg-light rounded-3 border border-secondary border-opacity-25">
+                                <p class="mb-3 fs-5"><strong><i class="fa-solid fa-user text-muted me-2"></i>Danışan Adı:</strong> <span id="detayKisi" class="fw-bold text-dark ms-1"></span></p>
+                                <p class="mb-3"><strong><i class="fa-solid fa-phone text-muted me-2"></i>Telefon:</strong> <span id="detayTel" class="fw-bold text-dark ms-1"></span></p>
+                                <p class="mb-3"><strong><i class="fa-solid fa-venus-mars text-muted me-2"></i>Cinsiyet:</strong> <span id="detayCinsiyet" class="text-secondary fw-bold ms-1"></span></p>
+                                <p class="mb-3"><strong><i class="fa-solid fa-list-check text-muted me-2"></i>Tür:</strong> <span id="detayTur" class="text-secondary fw-bold ms-1"></span></p>
+                                <p class="mb-0"><strong><i class="fa-solid fa-user-tie text-muted me-2"></i>Uzman:</strong> <span id="detayEkleyen" class="text-secondary ms-1"></span></p>
+                            </div>
+                            <input type="hidden" id="silinecekKayitId">
+                            
+                            <button type="button" id="duzenleBtn" onclick="window.kayitDuzenleModunaGec()" class="btn btn-warning w-100 py-3 fw-bold fs-5 rounded-3 mb-2 shadow-sm">
+                                <i class="fa-solid fa-pen-to-square me-2"></i> DÜZENLE
+                            </button>
+                            <button type="button" id="silBtn" onclick="window.kayitSilOnay()" class="btn btn-danger w-100 py-3 fw-bold fs-5 rounded-3 mt-1 shadow-sm">
+                                <i class="fa-solid fa-trash-can me-2"></i> RANDEVUYU İPTAL ET
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- YENİ: 1 GÜN ÖNCESİ HATIRLATMA MODALI -->
+            <div class="modal fade" id="hatirlatmaModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                    <div class="modal-content rounded-4 border-0 shadow-lg">
+                        <div class="modal-header bg-success text-white" style="border-radius: 15px 15px 0 0;">
+                            <h5 class="modal-title fw-bold"><i class="fa-brands fa-whatsapp me-2"></i>Yarının Hatırlatmaları</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body p-4 bg-light">
+                            <p class="text-muted small mb-3">Tarih: <strong id="hatirlatmaTarih" class="text-dark"></strong>. Listeden "Gönder" tuşuna basarak WhatsApp penceresini açabilirsiniz.</p>
+                            <div id="hatirlatmaListesi">
+                                <!-- Liste buraya yüklenecek -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    )}
+</Layout>
+
+<script is:inline>
+    window.guncelTarih = new Date();
+    window.isoTarihFormat = "";
+    window.myModal = null;
+    window.detayModal = null;
+    window.aktifIncelenenKayit = null; 
+    
+    window.alanSayisi = 4; 
+    window.saatler = [];
+    window.gunlukIzindekiler = []; 
+
+    function isimFormatla(isim) {
+        if (!isim) return "";
+        const parcalar = isim.trim().split(/\s+/);
+        if (parcalar.length === 1) {
+            return parcalar[0].charAt(0).toLocaleUpperCase('tr-TR') + parcalar[0].slice(1).toLocaleLowerCase('tr-TR');
+        }
+        const sonKelime = parcalar.pop().toLocaleUpperCase('tr-TR');
+        const ilkKisim = parcalar.map(p => p.charAt(0).toLocaleUpperCase('tr-TR') + p.slice(1).toLocaleLowerCase('tr-TR')).join(' ');
+        return ilkKisim + ' ' + sonKelime;
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const loginForm = document.getElementById('loginForm');
+        if (loginForm) {
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = document.getElementById('loginBtn');
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> GİRİŞ YAPILIYOR...';
+                try {
+                    const res = await fetch('/api/login', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ kullaniciAdi: document.getElementById('kullaniciAdi').value, sifre: document.getElementById('sifre').value })
+                    });
+                    if (res.ok) window.location.reload(); 
+                    else { alert((await res.json()).error); btn.innerHTML = 'GİRİŞ YAP'; }
+                } catch(err) { alert("Sunucu hatası."); }
+            });
+        }
+
+        if (document.getElementById('cikisBtn')) {
+            document.getElementById('cikisBtn').addEventListener('click', async () => {
+                await fetch('/api/logout', { method: 'POST' });
+                window.location.reload();
+            });
+        }
+
+        if (document.getElementById('anaSistem')) {
+            window.aktifKullanici = document.getElementById('authVerileri').getAttribute('data-kullanici');
+            window.aktifRol = document.getElementById('authVerileri').getAttribute('data-rol');
+
+            baslatSistemi();
+
+            document.getElementById('dunBtn').addEventListener('click', () => tarihDegistir(-1));
+            document.getElementById('yarinBtn').addEventListener('click', () => tarihDegistir(1));
+            document.getElementById('tarihSeciciAlan').addEventListener('click', () => document.getElementById('gizliTakvim').showPicker());
+            document.getElementById('gizliTakvim').addEventListener('change', (e) => tarihiGuncelle(e.target.value));
+
+            document.querySelectorAll('input[name="cinsiyetSecim"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    const kortNo = parseInt(document.getElementById('kayitKort').value);
+                    if (kortNo === 4) {
+                        const uzmanSelect = document.getElementById('kayitUzman');
+                        if (this.value === 'erkek') {
+                            uzmanSelect.innerHTML = '<option value="erdogan">Erdoğan Hoca</option>';
+                        } else {
+                            uzmanSelect.innerHTML = '<option value="muruvet">Mürüvet Hoca</option>';
+                        }
+                    }
+                });
+            });
+
+            const telInput = document.getElementById('kayitTelefon');
+            if(telInput) {
+                telInput.addEventListener('input', function (e) {
+                    let val = e.target.value.replace(/\D/g, ''); 
+                    if (val.length > 0 && val[0] !== '0') val = '0' + val; 
+                    if (val.length > 1 && val[1] !== '5') val = val.substring(0, 1) + '5' + val.substring(2); 
+                    
+                    let res = '';
+                    if (val.length > 0) res += val.substring(0, 4); 
+                    if (val.length > 4) res += ' ' + val.substring(4, 7); 
+                    if (val.length > 7) res += ' ' + val.substring(7, 9); 
+                    if (val.length > 9) res += ' ' + val.substring(9, 11); 
+                    e.target.value = res;
+                });
+            }
+
+            const isimInput = document.getElementById('kayitAdi');
+            const oneriListesi = document.getElementById('isimOnerileri');
+            let aramaZamanlayici;
+
+            isimInput.addEventListener('blur', function(e) {
+                e.target.value = isimFormatla(e.target.value);
+            });
+
+            isimInput.addEventListener('input', (e) => {
+                clearTimeout(aramaZamanlayici);
+                if (e.target.value.length < 2) { oneriListesi.classList.add('d-none'); return; }
+                aramaZamanlayici = setTimeout(async () => {
+                    const res = await fetch(`/api/musteri-ara?q=${e.target.value}`);
+                    const musteriler = await res.json();
+                    oneriListesi.innerHTML = '';
+                    if (musteriler.length > 0) {
+                        musteriler.forEach(m => {
+                            const li = document.createElement('li');
+                            li.className = 'list-group-item list-group-item-action cursor-pointer d-flex justify-content-between align-items-center';
+                            const duzgunIsim = m.adSoyad; 
+                            li.innerHTML = `<span class="fw-bold" style="color: var(--manu-teal);">${duzgunIsim}</span> <span class="badge bg-light text-dark border">${m.telefon}</span>`;
+                            li.addEventListener('click', () => {
+                                isimInput.value = duzgunIsim; document.getElementById('kayitTelefon').value = m.telefon; oneriListesi.classList.add('d-none');
+                            });
+                            oneriListesi.appendChild(li);
+                        });
+                        oneriListesi.classList.remove('d-none');
+                    } else oneriListesi.classList.add('d-none');
+                }, 300);
+            });
+            document.addEventListener('click', (e) => { if(e.target !== isimInput && e.target !== oneriListesi) oneriListesi.classList.add('d-none'); });
+
+            document.getElementById('kayitFormu').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = document.getElementById('kaydetBtn');
+                
+                const guncelTel = document.getElementById('kayitTelefon').value;
+                if(guncelTel && guncelTel.length < 14) {
+                    alert("Lütfen numarayı eksiksiz giriniz.\nÖrn: 0532 123 45 67");
+                    return;
+                }
+
+                btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> İŞLENİYOR...';
+
+                const editId = document.getElementById('editKayitId').value;
+                const methodType = editId ? 'PUT' : 'POST';
+                const finalIsim = isimFormatla(document.getElementById('kayitAdi').value);
+                const secilenCinsiyet = document.querySelector('input[name="cinsiyetSecim"]:checked').value;
+
+                try {
+                    const response = await fetch('/api/rezervasyon', {
+                        method: methodType,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            id: editId,
+                            kortNo: document.getElementById('kayitKort').value, 
+                            tarih: window.isoTarihFormat, 
+                            saat: document.getElementById('kayitSaat').value, 
+                            kisiAdi: finalIsim, 
+                            telefon: guncelTel, 
+                            rezervasyonTuru: document.getElementById('kayitTuru').value, 
+                            cinsiyet: secilenCinsiyet,
+                            ekleyen: document.getElementById('kayitUzman').value 
+                        })
+                    });
+
+                    if (response.ok) {
+                        
+                        // YENİ KAYITLARDA WHATSAPP AÇILIŞI (ONAY BİLDİRİMİ)
+                        if (methodType === 'POST') {
+                            const wpTel = guncelTel.replace(/\D/g, ''); 
+                            if (wpTel.length >= 10) {
+                                const trNumara = wpTel.startsWith('0') ? '9' + wpTel : '90' + wpTel;
+                                const [yil, ay, gun] = window.isoTarihFormat.split('-');
+                                const trTarih = `${gun}.${ay}.${yil}`;
+                                const kayitSaat = document.getElementById('kayitSaat').value;
+                                const islemTuru = document.getElementById('kayitTuru').value;
+                                
+                                const wpMesaj = `Sayın ${finalIsim},\n\n${trTarih} tarihi saat ${kayitSaat} için Manuvital Terapi Merkezi'nde ${islemTuru} randevunuz oluşturulmuştur.\n\n📍 Konum: https://maps.app.goo.gl/wY9mZqQzQvR2rLh39\n\nSağlıklı günler dileriz.`;
+                                
+                                const wpUrl = `https://wa.me/${trNumara}?text=${encodeURIComponent(wpMesaj)}`;
+                                window.open(wpUrl, '_blank');
+                            }
+                        }
+
+                        if(window.myModal) window.myModal.hide();
+                        await tabloyuCiz();
+                        if(typeof Swal !== 'undefined') Swal.fire({ title: 'Başarılı!', text: editId ? 'Kayıt güncellendi.' : 'Kayıt eklendi.', icon: 'success', timer: 1500, showConfirmButton: false });
+                    } else {
+                        const err = await response.json();
+                        alert(err.error || "İşlem başarısız.");
+                    }
+                } catch (error) { alert("Veritabanına bağlanılamadı."); } 
+                finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-check-double me-2"></i> KAYDET VE BİLDİR'; }
+            });
+        }
+    });
+
+    // YENİ: YARININ HATIRLATMALARI FONKSİYONU
+    window.yarinHatirlatmalariAc = async function() {
+        const btn = document.getElementById('hatirlatmaBtn');
+        if(btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Hazırlanıyor...';
+
+        try {
+            const yarin = new Date();
+            yarin.setDate(yarin.getDate() + 1);
+            const yarinIso = yarin.toISOString().slice(0, 10);
+            const yarinTr = yarin.toLocaleDateString('tr-TR');
+
+            const res = await fetch(`/api/rezervasyon?tarih=${yarinIso}`);
+            const kayitlar = await res.json();
+
+            const listeDiv = document.getElementById('hatirlatmaListesi');
+            document.getElementById('hatirlatmaTarih').innerText = yarinTr;
+
+            if (kayitlar.length === 0) {
+                listeDiv.innerHTML = '<div class="alert alert-secondary text-center py-4"><i class="fa-solid fa-bed fs-2 mb-2 d-block text-muted"></i>Yarın için kayıtlı hiçbir randevu bulunmuyor.</div>';
+            } else {
+                // Kayıtları saate göre sırala (Sabah gelenler önce)
+                kayitlar.sort((a, b) => a.saat.localeCompare(b.saat));
+
+                let html = '<ul class="list-group list-group-flush border rounded-3 overflow-hidden shadow-sm">';
+                kayitlar.forEach(k => {
+                    const wpTel = k.telefon ? k.telefon.replace(/\D/g, '') : '';
+                    if (wpTel.length >= 10) {
+                        const trNumara = wpTel.startsWith('0') ? '9' + wpTel : '90' + wpTel;
+                        const mesaj = `Sayın ${k.kisiAdi},\n\nHatırlatma: Yarın (${yarinTr}) saat ${k.saat} için Manuvital Terapi Merkezi'nde ${k.rezervasyonTuru} randevunuz bulunmaktadır.\n\n📍 Konum: https://maps.app.goo.gl/wY9mZqQzQvR2rLh39\n\nSağlıklı günler dileriz.`;
+                        const wpUrl = `https://wa.me/${trNumara}?text=${encodeURIComponent(mesaj)}`;
+
+                        html += `
+                            <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <div>
+                                    <strong class="d-block text-dark fs-6">${k.kisiAdi}</strong>
+                                    <small class="text-muted fw-bold"><i class="fa-regular fa-clock me-1" style="color: var(--manu-teal);"></i> ${k.saat} - <span class="fw-normal">${k.rezervasyonTuru}</span></small>
+                                </div>
+                                <a href="${wpUrl}" target="_blank" class="btn btn-sm btn-success fw-bold px-3 py-2 rounded-pill shadow-sm" style="transition: all 0.2s;" onclick="this.innerHTML='<i class=\\'fa-solid fa-check me-1\\'></i> Gönderildi'; this.classList.remove('btn-success'); this.classList.add('btn-outline-secondary', 'disabled');">
+                                    <i class="fa-brands fa-whatsapp me-1 fs-6"></i> Gönder
+                                </a>
+                            </li>
+                        `;
+                    } else {
+                        html += `
+                            <li class="list-group-item d-flex justify-content-between align-items-center py-3 bg-light">
+                                <div>
+                                    <strong class="d-block text-secondary">${k.kisiAdi}</strong>
+                                    <small class="text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation me-1"></i> Geçerli telefon yok</small>
+                                </div>
+                            </li>
+                        `;
+                    }
+                });
+                html += '</ul>';
+                listeDiv.innerHTML = html;
+            }
+
+            if(btn) btn.innerHTML = '<i class="fa-brands fa-whatsapp"></i> Yarının Hatırlatmaları';
+            new bootstrap.Modal(document.getElementById('hatirlatmaModal')).show();
+
+        } catch(err) {
+            alert("Hatırlatma verileri çekilemedi.");
+            if(btn) btn.innerHTML = '<i class="fa-brands fa-whatsapp"></i> Yarının Hatırlatmaları';
+        }
+    };
+
+    async function baslatSistemi() {
+        if(typeof bootstrap !== 'undefined') {
+            window.myModal = new bootstrap.Modal(document.getElementById('rezModal'));
+            window.detayModal = new bootstrap.Modal(document.getElementById('detayModal'));
+        }
+
+        try {
+            const res = await fetch('/api/ayarlar-api');
+            if(res.ok) {
+                const ayar = await res.json();
+                const baslangic = parseInt(ayar.baslangicSaati);
+                const bitis = parseInt(ayar.bitisSaati);
+                window.saatler = [];
+                for(let i = baslangic; i <= bitis; i++) {
+                    window.saatler.push(i.toString().padStart(2, '0') + ":00");
+                }
+            }
+        } catch(err) {
+            window.saatler = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00"];
+        }
+        tarihiGuncelle(`${window.guncelTarih.getFullYear()}-${String(window.guncelTarih.getMonth() + 1).padStart(2, '0')}-${String(window.guncelTarih.getDate()).padStart(2, '0')}`);
+    }
+
+    function tarihDegistir(gf) { window.guncelTarih.setDate(window.guncelTarih.getDate() + gf); tarihiGuncelle(`${window.guncelTarih.getFullYear()}-${String(window.guncelTarih.getMonth() + 1).padStart(2, '0')}-${String(window.guncelTarih.getDate()).padStart(2, '0')}`); }
+    
+    function tarihiGuncelle(val) {
+        if(!val) return;
+        window.isoTarihFormat = val;
+        const [yil, ay, gun] = val.split('-');
+        window.guncelTarih = new Date(yil, ay - 1, gun);
+        document.getElementById('gizliTakvim').value = window.isoTarihFormat;
+        document.getElementById('gosterilenTarih').innerText = window.guncelTarih.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric', weekday: 'long' });
+        tabloyuCiz();
+    }
+
+    async function tabloyuCiz() {
+        const tbody = document.getElementById('tabloGövdesi');
+        if(!tbody) return;
+        
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-muted fw-bold"><i class="fa-solid fa-spinner fa-spin me-2" style="color: var(--manu-teal);"></i>Takvim Çiziliyor...</td></tr>`;
+        
+        try {
+            const [rezRes, izinRes] = await Promise.all([
+                fetch(`/api/rezervasyon?tarih=${window.isoTarihFormat}`),
+                fetch('/api/izinler')
+            ]);
+            
+            const dbKayitlar = await rezRes.json();
+            const kapaliKuralListesi = await izinRes.json();
+            
+            const kayitMap = {};
+            if(Array.isArray(dbKayitlar)) dbKayitlar.forEach(k => { kayitMap[`${k.saat}_${k.alanId}`] = k; });
+
+            tbody.innerHTML = ""; 
+            const simdi = new Date();
+            const bugunTarihi = new Date(simdi.getTime() - (simdi.getTimezoneOffset() * 60000)).toISOString().slice(0, 10);
+            const isGecmisTarih = window.isoTarihFormat < bugunTarihi;
+            const guncelGunIndex = window.guncelTarih.getDay();
+
+            const aktifIzinler = Array.isArray(kapaliKuralListesi) ? kapaliKuralListesi.filter(iz => {
+                const tarihUyuyor = (iz.tip === 'tarih' && iz.deger === window.isoTarihFormat);
+                let aralikUyuyor = false;
+                if (iz.tip === 'aralik') {
+                    const [baslangic, bitis] = iz.deger.split('_');
+                    if (window.isoTarihFormat >= baslangic && window.isoTarihFormat <= bitis) aralikUyuyor = true;
+                }
+                const rutinUyuyor = (iz.tip === 'rutin' && parseInt(iz.deger) === guncelGunIndex);
+                return tarihUyuyor || aralikUyuyor || rutinUyuyor;
+            }) : [];
+
+            window.gunlukIzindekiler = aktifIzinler.map(i => i.kapsam); 
+
+            window.saatler.forEach(saat => {
+                let tr = document.createElement('tr');
+                tr.innerHTML = `<td class="time-cell">${saat}</td>`;
+                
+                for (let kort = 1; kort <= window.alanSayisi; kort++) {
+                    
+                    let kortKapaliSebep = null;
+                    if (window.gunlukIzindekiler.includes('TUM')) kortKapaliSebep = aktifIzinler.find(i=>i.kapsam==='TUM').sebep;
+                    else if (kort === 1 && window.gunlukIzindekiler.includes('huseyin')) kortKapaliSebep = aktifIzinler.find(i=>i.kapsam==='huseyin').sebep;
+                    else if (kort === 2 && window.gunlukIzindekiler.includes('irem')) kortKapaliSebep = aktifIzinler.find(i=>i.kapsam==='irem').sebep;
+                    else if (kort === 3 && window.gunlukIzindekiler.includes('erdogan')) kortKapaliSebep = aktifIzinler.find(i=>i.kapsam==='erdogan').sebep;
+                    else if (kort === 4 && window.gunlukIzindekiler.includes('erdogan') && window.gunlukIzindekiler.includes('muruvet')) {
+                        kortKapaliSebep = "Tüm Hacamat Uzmanları İzinli";
+                    }
+
+                    if (kortKapaliSebep) {
+                        let td = document.createElement('td');
+                        td.className = 'cell-closed shadow-sm';
+                        td.innerHTML = `<div class="h-100 w-100 d-flex flex-column justify-content-center align-items-center opacity-75">
+                                            <i class="fa-solid fa-plane-slash mb-1 fs-5"></i>
+                                            <span class="closed-title text-dark">${kortKapaliSebep}</span>
+                                        </div>`;
+                        td.addEventListener('click', () => {
+                            if(typeof Swal !== 'undefined') Swal.fire('İşlem Engellendi', `Bu alan şu sebeple kapalıdır: <b>${kortKapaliSebep}</b>`, 'warning');
+                            else alert(`Bu alan kapalı: ${kortKapaliSebep}`);
+                        });
+                        tr.appendChild(td);
+                        continue; 
+                    }
+
+                    let mevcutKayit = kayitMap[`${saat}_${kort}`];
+                    if (mevcutKayit) {
+                        let td = document.createElement('td');
+                        if (window.aktifRol === 'uzman' && mevcutKayit.notlar !== window.aktifKullanici) {
+                            td.style.backgroundColor = "#e9ecef"; td.style.cursor = "not-allowed";
+                            td.innerHTML = `<div class="d-flex flex-column justify-content-center align-items-center h-100 opacity-50"><i class="fa-solid fa-lock mb-1"></i><span class="fw-bold small">Dolu</span></div>`;
+                            td.addEventListener('click', () => Swal.fire('Gizli Bilgi', 'Bu seans başka bir uzmana aittir.', 'warning'));
+                        } else {
+                            td.className = 'cell-full shadow-sm';
+                            
+                            let bgClass = "";
+                            if(kort===1) bgClass = "border-start border-4 border-info";
+                            if(kort===2) bgClass = "border-start border-4 border-primary";
+                            if(kort===3) bgClass = "border-start border-4 border-warning";
+                            if(kort===4) bgClass = "border-start border-4 border-danger"; 
+                            
+                            const duzgunIsim = isimFormatla(mevcutKayit.kisiAdi);
+                            
+                            td.innerHTML = `<div class="h-100 w-100 p-1 ${bgClass}"><span class="rez-name d-block fw-bold text-dark">${duzgunIsim}</span><span class="rez-teacher text-muted d-block small"><i class="fa-solid fa-user-tie me-1"></i>${mevcutKayit.notlar}</span><span class="rez-note d-block small" style="color: var(--manu-teal);"><i class="fa-solid fa-leaf me-1"></i>${mevcutKayit.rezervasyonTuru}</span></div>`;
+                            td.addEventListener('click', () => window.detayModalAc(mevcutKayit, kort, saat));
+                        }
+                        tr.appendChild(td);
+                    } else {
+                        let td = document.createElement('td');
+                        td.className = 'cell-empty'; 
+                        
+                        if (isGecmisTarih) {
+                            td.style.cursor = "not-allowed";
+                            td.style.backgroundColor = "#f8f9fa";
+                            td.innerHTML = `<div class="w-100 h-100 d-flex justify-content-center align-items-center opacity-25"><i class="fa-solid fa-ban text-muted"></i></div>`;
+                            td.addEventListener('click', () => {
+                                if(typeof Swal !== 'undefined') Swal.fire('İşlem Engellendi', 'Geçmiş tarihlere yeni kayıt eklenemez.', 'error');
+                                else alert('Geçmiş tarihlere yeni kayıt eklenemez.');
+                            });
+                        } else {
+                            let iconColor = kort === 4 ? "color: var(--manu-hacamat);" : "color: var(--manu-teal);";
+                            td.innerHTML = `<button type="button" class="btn btn-sm btn-link p-0 w-100 h-100 shadow-none border-0" style="${iconColor}"><i class="fa-solid fa-plus fs-5"></i></button>`;
+                            td.addEventListener('click', () => window.ekleModalAc(kort, saat));
+                        }
+                        tr.appendChild(td);
+                    }
+                }
+                tbody.appendChild(tr);
+            });
+
+        } catch (err) { tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation me-2"></i>Neon veritabanı bağlantı hatası!</td></tr>`; }
+    }
+
+    window.ekleModalAc = function(kortNo, saat) {
+        document.getElementById('editKayitId').value = ""; 
+        document.getElementById('kayitSaat').value = saat;
+        document.getElementById('kayitKort').value = kortNo;
+        document.getElementById('kayitAdi').value = ""; 
+        document.getElementById('kayitTelefon').value = "";
+        document.getElementById('kaydetBtn').innerHTML = '<i class="fa-solid fa-check-double me-2"></i> KAYDET VE BİLDİR';
+        document.getElementById('rezModalBaslik').innerHTML = '<i class="fa-solid fa-calendar-plus text-warning me-2"></i>Yeni Randevu';
+        
+        const modalOdaIsimleri = ["ODA 1 (Refleks. - Hüseyin)", "ODA 2 (Refleks. - İrem)", "ODA 3 (Refleks. - Erdoğan)", "ODA 4 (Hacamat Odası)"];
+        document.getElementById('modalKortBadge').innerText = modalOdaIsimleri[kortNo - 1] || `ODA ${kortNo}`;
+        document.getElementById('modalSaatBadge').innerText = 'Saat: ' + saat;
+        document.getElementById('modalTarihMetni').innerText = document.getElementById('gosterilenTarih').innerText;
+        
+        const turSelect = document.getElementById('kayitTuru');
+        const uzmanSelect = document.getElementById('kayitUzman');
+        
+        turSelect.innerHTML = '';
+        uzmanSelect.innerHTML = '';
+        uzmanSelect.disabled = true;
+
+        if (kortNo === 1 || kortNo === 2 || kortNo === 3) {
+            turSelect.innerHTML = '<option value="Refleksoloji Masajı">Refleksoloji Masajı</option>';
+            turSelect.disabled = true; 
+            
+            if (kortNo === 1) uzmanSelect.innerHTML = '<option value="huseyin">Hüseyin Hoca</option>';
+            if (kortNo === 2) uzmanSelect.innerHTML = '<option value="irem">İrem Hoca</option>';
+            if (kortNo === 3) uzmanSelect.innerHTML = '<option value="erdogan">Erdoğan Hoca</option>';
+        } 
+        else if (kortNo === 4) {
+            turSelect.innerHTML = '<option value="Hacamat">Hacamat</option>';
+            turSelect.disabled = true; 
+            
+            const secilenCinsiyet = document.querySelector('input[name="cinsiyetSecim"]:checked').value;
+            if (secilenCinsiyet === 'kadin') {
+                uzmanSelect.innerHTML = '<option value="muruvet">Mürüvet Hoca</option>';
+            } else {
+                uzmanSelect.innerHTML = '<option value="erdogan">Erdoğan Hoca</option>';
+            }
+        }
+
+        if(window.myModal) window.myModal.show();
+    };
+
+    window.detayModalAc = function(kayit, kortNo, saat) {
+        window.aktifIncelenenKayit = kayit; 
+        
+        const modalOdaIsimleri = ["ODA 1 (Refleks. - Hüseyin)", "ODA 2 (Refleks. - İrem)", "ODA 3 (Refleks. - Erdoğan)", "ODA 4 (Hacamat Odası)"];
+        document.getElementById('detayKortBadge').innerText = modalOdaIsimleri[kortNo - 1] || `ODA ${kortNo}`;
+        document.getElementById('detaySaatBadge').innerText = 'Saat: ' + saat;
+        document.getElementById('detayTarihMetni').innerText = document.getElementById('gosterilenTarih').innerText;
+        document.getElementById('detayKisi').innerText = isimFormatla(kayit.kisiAdi);
+        document.getElementById('detayTel').innerText = kayit.telefon || 'Belirtilmemiş';
+        document.getElementById('detayCinsiyet').innerText = kayit.cinsiyet === 'kadin' ? 'Kadın' : 'Erkek';
+        document.getElementById('detayTur').innerText = kayit.rezervasyonTuru || '-';
+        document.getElementById('detayEkleyen').innerText = kayit.notlar;
+        document.getElementById('silinecekKayitId').value = kayit.id;
+        
+        const simdi = new Date();
+        const bugunTarihi = new Date(simdi.getTime() - (simdi.getTimezoneOffset() * 60000)).toISOString().slice(0, 10);
+        if (window.isoTarihFormat < bugunTarihi) {
+            document.getElementById('duzenleBtn').style.display = 'none';
+            document.getElementById('silBtn').style.display = 'none';
+        } else {
+            document.getElementById('duzenleBtn').style.display = 'block';
+            document.getElementById('silBtn').style.display = 'block';
+        }
+
+        if(window.detayModal) window.detayModal.show();
+    };
+
+    window.kayitDuzenleModunaGec = function() {
+        if(window.detayModal) window.detayModal.hide(); 
+
+        const kayit = window.aktifIncelenenKayit;
+        document.getElementById('editKayitId').value = kayit.id; 
+        document.getElementById('kayitSaat').value = kayit.saat;
+        const kortNo = parseInt(kayit.alanId);
+        document.getElementById('kayitKort').value = kortNo;
+        document.getElementById('kayitAdi').value = isimFormatla(kayit.kisiAdi);
+        document.getElementById('kayitTelefon').value = kayit.telefon || "";
+        
+        if (kayit.cinsiyet === 'kadin') {
+            document.getElementById('cinsiyetKadin').checked = true;
+        } else {
+            document.getElementById('cinsiyetErkek').checked = true;
+        }
+
+        const turSelect = document.getElementById('kayitTuru');
+        const uzmanSelect = document.getElementById('kayitUzman');
+        
+        turSelect.innerHTML = '';
+        uzmanSelect.innerHTML = '';
+        uzmanSelect.disabled = true;
+        
+        if (kortNo === 1 || kortNo === 2 || kortNo === 3) {
+            turSelect.innerHTML = '<option value="Refleksoloji Masajı">Refleksoloji Masajı</option>';
+            turSelect.disabled = true; 
+            
+            if (kortNo === 1) uzmanSelect.innerHTML = '<option value="huseyin">Hüseyin Hoca</option>';
+            if (kortNo === 2) uzmanSelect.innerHTML = '<option value="irem">İrem Hoca</option>';
+            if (kortNo === 3) uzmanSelect.innerHTML = '<option value="erdogan">Erdoğan Hoca</option>';
+        } 
+        else if (kortNo === 4) {
+            turSelect.innerHTML = `<option value="Hacamat">Hacamat</option>`;
+            turSelect.disabled = true; 
+            
+            if (kayit.cinsiyet === 'kadin') {
+                uzmanSelect.innerHTML = '<option value="muruvet">Mürüvet Hoca</option>';
+            } else {
+                uzmanSelect.innerHTML = '<option value="erdogan">Erdoğan Hoca</option>';
+            }
+        }
+        
+        const modalOdaIsimleri = ["ODA 1 (Refleks. - Hüseyin)", "ODA 2 (Refleks. - İrem)", "ODA 3 (Refleks. - Erdoğan)", "ODA 4 (Hacamat Odası)"];
+        document.getElementById('modalKortBadge').innerText = modalOdaIsimleri[kortNo - 1] || `ODA ${kortNo}`;
+        document.getElementById('modalSaatBadge').innerText = 'Saat: ' + kayit.saat;
+        document.getElementById('modalTarihMetni').innerText = document.getElementById('gosterilenTarih').innerText;
+
+        document.getElementById('rezModalBaslik').innerHTML = '<i class="fa-solid fa-pen-to-square text-warning me-2"></i>Randevuyu Düzenle';
+        document.getElementById('kaydetBtn').innerHTML = '<i class="fa-solid fa-floppy-disk me-2"></i> GÜNCELLE';
+        
+        if(window.myModal) window.myModal.show(); 
+    };
+
+    window.kayitSilOnay = async function() {
+        const id = document.getElementById('silinecekKayitId').value;
+        if(confirm("İptal etmek istediğinize emin misiniz?")) {
+            document.getElementById('silBtn').innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> SİLİNİYOR...';
+            try {
+                const response = await fetch(`/api/rezervasyon?id=${id}`, { method: 'DELETE' });
+                if (response.ok) {
+                    if(window.detayModal) window.detayModal.hide();
+                    await tabloyuCiz();
+                } else alert("Hata oluştu.");
+            } catch(e) { alert("Sunucu hatası."); } 
+            finally { document.getElementById('silBtn').innerHTML = '<i class="fa-solid fa-trash-can me-2"></i> RANDEVUYU İPTAL ET'; }
+        }
+    };
+</script>
+
+<div class="modal fade" id="sifreModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header text-white rounded-top-4" style="background-color: var(--manu-teal);">
+                <h6 class="modal-title fw-bold"><i class="fa-solid fa-key me-2"></i>Şifre Değiştir</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="sifreFormu">
+                    <div class="mb-3">
+                        <input type="password" id="eskiSifre" class="form-control" placeholder="Mevcut Şifreniz" required>
+                    </div>
+                    <div class="mb-3">
+                        <input type="password" id="yeniSifre" class="form-control" placeholder="Yeni Şifre" required minlength="6">
+                    </div>
+                    <button type="submit" id="sifreKaydetBtn" class="btn btn-manu w-100 fw-bold">GÜNCELLE</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script is:inline>
+    document.addEventListener("DOMContentLoaded", function() {
+        const sifreFormu = document.getElementById('sifreFormu');
+        if(sifreFormu) {
+            sifreFormu.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = document.getElementById('sifreKaydetBtn');
+                btn.innerHTML = 'BEKLEYİN...'; btn.disabled = true;
+                
+                const res = await fetch('/api/sifre-degistir', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        eskiSifre: document.getElementById('eskiSifre').value,
+                        yeniSifre: document.getElementById('yeniSifre').value
+                    })
+                });
+                
+                if(res.ok) {
+                    alert("Şifreniz başarıyla değiştirildi! Lütfen yeni şifrenizle tekrar giriş yapın.");
+                    await fetch('/api/logout', { method: 'POST' });
+                    window.location.reload();
+                } else {
+                    const data = await res.json();
+                    alert(data.error);
+                    btn.innerHTML = 'GÜNCELLE'; btn.disabled = false;
+                }
+            });
+        }
+    });
+</script>

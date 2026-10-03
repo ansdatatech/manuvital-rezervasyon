@@ -1,0 +1,572 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { decodeJwt } from 'jose';
+
+const token = Astro.cookies.get('auth_token')?.value;
+
+if (!token) {
+    return Astro.redirect('/');
+}
+
+// Güvenlik: Sadece YÖNETİCİ girebilir
+try {
+    const decoded = decodeJwt(token);
+    if (decoded.rol !== 'yonetici') {
+        return Astro.redirect('/');
+    }
+} catch (error) {
+    return Astro.redirect('/');
+}
+---
+
+<Layout title="Klinik İstatistikleri | Manuvital Terapi Merkezi">
+
+    <style is:global>
+        :root {
+            --manu-teal: #1a7b83;       
+            --manu-teal-light: #309e9e; 
+            --manu-gold: #d9a554; 
+            --manu-hacamat: #8c3a3a;      
+        }
+        
+        /* SELECT OK İŞARETLERİNİ GİZLEME */
+        select {
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            appearance: none !important;
+            background-image: none !important;
+        }
+        select::-ms-expand { display: none !important; }
+    </style>
+
+    <div class="bg-dark text-white p-2 d-flex justify-content-between align-items-center" style="border-bottom: 3px solid var(--manu-gold);">
+        <div class="container d-flex justify-content-between align-items-center">
+            <span class="fw-bold"><i class="fa-solid fa-chart-pie text-success me-2" style="color: var(--manu-gold) !important;"></i> PERFORMANS VE FİNANS PANOSU</span>
+            <a href="/" class="btn btn-sm btn-outline-light"><i class="fa-solid fa-arrow-left me-1"></i> Panele Dön</a>
+        </div>
+    </div>
+
+    <div class="container mt-4">
+        
+        <!-- FİLTRELEME VE İNDİRME ÇUBUĞU -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm border-start border-4 rounded-4 bg-white p-3 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3" style="border-color: var(--manu-teal) !important;">
+                    <div class="d-flex align-items-center flex-wrap gap-3">
+                        
+                        <!-- TARİH FİLTRESİ -->
+                        <span class="fw-bold text-muted"><i class="fa-solid fa-calendar-day me-1"></i> Tarih:</span>
+                        <select id="zamanFiltresi" class="form-select form-select-sm w-auto fw-bold shadow-sm border-secondary">
+                            <option value="hepsi">Tüm Zamanlar</option>
+                            <option value="buAy">Bu Ay</option>
+                            <option value="gecenAy">Geçen Ay</option>
+                            <option value="son7">Son 7 Gün</option>
+                            <option value="ozel">Özel Tarih Aralığı...</option>
+                        </select>
+                        
+                        <!-- ÖZEL TARİH SEÇİCİ -->
+                        <div id="ozelTarihAlan" class="d-none align-items-center gap-2">
+                            <input type="date" id="baslangicTarih" class="form-control form-control-sm border-secondary">
+                            <span class="text-muted fw-bold">-</span>
+                            <input type="date" id="bitisTarih" class="form-control form-control-sm border-secondary">
+                            <button id="ozelTarihUygula" class="btn btn-sm text-white fw-bold px-3" style="background-color: var(--manu-teal);">Uygula</button>
+                        </div>
+
+                        <!-- UZMAN FİLTRESİ -->
+                        <span class="fw-bold text-muted ms-md-2"><i class="fa-solid fa-user-doctor me-1"></i> Uzman:</span>
+                        <select id="uzmanFiltresi" class="form-select form-select-sm w-auto fw-bold shadow-sm border-secondary">
+                            <option value="hepsi">Tüm Uzmanlar</option>
+                            <option value="huseyin">Hüseyin Hoca</option>
+                            <option value="irem">İrem Hoca</option>
+                            <option value="erdogan">Erdoğan Hoca</option>
+                            <option value="muruvet">Mürüvet Hoca</option>
+                        </select>
+
+                        <!-- CİNSİYET FİLTRESİ (YENİ) -->
+                        <span class="fw-bold text-muted ms-md-2"><i class="fa-solid fa-venus-mars me-1"></i> Cinsiyet:</span>
+                        <select id="cinsiyetFiltresi" class="form-select form-select-sm w-auto fw-bold shadow-sm border-secondary">
+                            <option value="hepsi">Tümü</option>
+                            <option value="erkek">Erkek</option>
+                            <option value="kadin">Kadın</option>
+                        </select>
+
+                    </div>
+
+                    <button id="csvIndirBtn" class="btn btn-sm btn-success fw-bold px-3 shadow-sm" onclick="window.csvIndir()">
+                        <i class="fa-solid fa-file-excel me-1"></i> Excel/CSV Raporu İndir
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ÜST ÖZET KARTLARI -->
+        <div class="row mb-4">
+            <!-- 1. Toplam Rezervasyon -->
+            <div class="col-md-3">
+                <div class="card shadow-sm border-0 rounded-4 text-white h-100" style="background-color: #2c3e50;">
+                    <div class="card-body">
+                        <h6 class="text-uppercase mb-2" style="opacity: 0.8;"><i class="fa-solid fa-calendar-check me-2"></i>Toplam Seans</h6>
+                        <h2 class="display-5 fw-bold mb-0" id="totalRez">0</h2>
+                        <div class="mt-2 small" style="opacity: 0.9;"><i class="fa-solid fa-fire me-1"></i> En Yoğun: <span id="peakHour" class="fw-bold">-</span></div>
+                    </div>
+                </div>
+            </div>
+            <!-- 2. Refleksoloji -->
+            <div class="col-md-3">
+                <div class="card shadow-sm border-0 rounded-4 text-white h-100" style="background-color: var(--manu-teal);">
+                    <div class="card-body">
+                        <h6 class="text-uppercase mb-2" style="opacity: 0.8;"><i class="fa-solid fa-hands me-2"></i>Refleksoloji</h6>
+                        <h2 class="display-5 fw-bold mb-0" id="totalRefleks">0</h2>
+                        <div class="mt-2 small" style="opacity: 0.9;">
+                            <i class="fa-solid fa-chart-pie me-1"></i> Seçilen aralıktaki payı: <span id="yuzdeRefleks" class="fw-bold badge bg-white ms-1" style="color: var(--manu-teal);">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- 3. Hacamat -->
+            <div class="col-md-3">
+                <div class="card shadow-sm border-0 rounded-4 text-white h-100" style="background-color: var(--manu-hacamat);">
+                    <div class="card-body">
+                        <h6 class="text-uppercase mb-2" style="opacity: 0.8;"><i class="fa-solid fa-droplet me-2"></i>Hacamat</h6>
+                        <h2 class="display-5 fw-bold mb-0" id="totalHacamat">0</h2>
+                        <div class="mt-2 small" style="opacity: 0.9;">
+                            <i class="fa-solid fa-chart-pie me-1"></i> Seçilen aralıktaki payı: <span id="yuzdeHacamat" class="fw-bold badge bg-white text-dark ms-1">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- 4. Tahmini Gelir -->
+            <div class="col-md-3">
+                <div class="card shadow-sm border-0 rounded-4 bg-info text-white h-100">
+                    <div class="card-body">
+                        <h6 class="text-uppercase mb-2" style="opacity: 0.8;"><i class="fa-solid fa-wallet me-2"></i>Filtrelenen Ciro</h6>
+                        <h2 class="display-6 fw-bold mb-0" id="totalCiro" style="font-size: 2.1rem;">0 ₺</h2>
+                        <div class="mt-2 small" style="opacity: 0.9;">
+                            <i class="fa-solid fa-circle-info me-1"></i> Fiyatlandırma kurallarına göre
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- UZMAN BAZLI HAKEDİŞ TABLOSU -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm border-0 rounded-4">
+                    <div class="card-header bg-white border-0 pt-4 pb-2">
+                        <h5 class="fw-bold m-0" style="color: #2c3e50;"><i class="fa-solid fa-user-doctor me-2" style="color: var(--manu-gold);"></i>Uzman Performans ve Hakediş Dağılımı</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 text-center">
+                                <thead class="table-light text-muted small text-uppercase">
+                                    <tr>
+                                        <th class="text-start ps-4">Uzman Adı</th>
+                                        <th>Refleksoloji<br><small>(Hüseyin 5.000 ₺ / Diğer 3.000 ₺)</small></th>
+                                        <th>Hacamat<br><small>(Sabit 2.000 ₺)</small></th>
+                                        <th>Toplam Seans</th>
+                                        <th class="text-end pe-4">Toplam Üretilen Ciro</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="uzmanTabloGovdesi">
+                                    <tr><td colspan="5" class="py-4 text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i> Hesaplanıyor...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GRAFİKLER -->
+        <div class="row">
+            <!-- Sol: Alan Dağılımı (Pasta) -->
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm border-0 rounded-4 h-100">
+                    <div class="card-header bg-white border-0 pt-4 pb-0">
+                        <h5 class="fw-bold text-secondary"><i class="fa-solid fa-chart-pie me-2"></i>Oda (Alan) Dağılımı</h5>
+                    </div>
+                    <div class="card-body d-flex align-items-center justify-content-center">
+                        <div id="alanGrafik" style="width: 100%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sağ: Cinsiyet Dağılımı (Pasta - YENİ) -->
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm border-0 rounded-4 h-100">
+                    <div class="card-header bg-white border-0 pt-4 pb-0">
+                        <h5 class="fw-bold text-secondary"><i class="fa-solid fa-venus-mars me-2"></i>Danışan Cinsiyet Dağılımı</h5>
+                    </div>
+                    <div class="card-body d-flex align-items-center justify-content-center">
+                        <div id="cinsiyetGrafik" style="width: 100%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ORTA SATIR: SAATLİK YOĞUNLUK -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm border-0 rounded-4 h-100">
+                    <div class="card-header bg-white border-0 pt-4 pb-0">
+                        <h5 class="fw-bold text-secondary"><i class="fa-solid fa-chart-column me-2"></i>Saatlik Yoğunluk Analizi</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="saatGrafik" style="width: 100%; min-height: 300px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ALT SATIR: HAFTANIN GÜNLERİ TREND GRAFİĞİ -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="card shadow-sm border-0 rounded-4">
+                    <div class="card-header bg-white border-0 pt-4 pb-0">
+                        <h5 class="fw-bold text-secondary"><i class="fa-solid fa-chart-line me-2"></i>Haftanın Günleri (Yoğunluk Trendi)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="haftaGrafik" style="width: 100%; min-height: 300px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+</Layout>
+
+<!-- ApexCharts CDN -->
+<script is:inline src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+<script is:inline>
+    let tumVeriler = [];
+    let aktifFiltreliVeri = []; 
+    let alanChartInst = null;
+    let cinsiyetChartInst = null; // YENİ
+    let saatChartInst = null;
+    let haftaChartInst = null; 
+    const guncelTarih = new Date();
+
+    document.addEventListener("DOMContentLoaded", async function() {
+        try {
+            const aylar = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+            const mevcutAy = guncelTarih.getMonth();
+            
+            document.querySelector('#zamanFiltresi option[value="buAy"]').innerText = `Bu Ay (${aylar[mevcutAy]})`;
+            document.querySelector('#zamanFiltresi option[value="gecenAy"]').innerText = `Geçen Ay (${aylar[mevcutAy === 0 ? 11 : mevcutAy - 1]})`;
+
+            const response = await fetch(`/api/rezervasyon?tarih=hepsi`);
+            tumVeriler = await response.json();
+
+            grafikleriGuncelle(tumVeriler);
+
+            // Tüm filtre tetikleyicileri
+            document.getElementById('zamanFiltresi').addEventListener('change', filtreUygula);
+            document.getElementById('uzmanFiltresi').addEventListener('change', filtreUygula);
+            document.getElementById('cinsiyetFiltresi').addEventListener('change', filtreUygula); // YENİ
+            document.getElementById('ozelTarihUygula').addEventListener('click', filtreUygula);
+
+        } catch (error) {
+            console.error("Veri çekme hatası:", error);
+        }
+    });
+
+    function filtreUygula() {
+        const filtreTuru = document.getElementById('zamanFiltresi').value;
+        const uzmanTuru = document.getElementById('uzmanFiltresi').value; 
+        const cinsiyetTuru = document.getElementById('cinsiyetFiltresi').value; // YENİ
+        const ozelTarihAlan = document.getElementById('ozelTarihAlan');
+        
+        let filtrelenmis = [];
+
+        // 1. TARİH FİLTRESİ
+        if (filtreTuru === 'ozel') {
+            ozelTarihAlan.classList.remove('d-none');
+            ozelTarihAlan.classList.add('d-flex');
+        } else {
+            ozelTarihAlan.classList.add('d-none');
+            ozelTarihAlan.classList.remove('d-flex');
+        }
+
+        if (filtreTuru === 'hepsi') {
+            filtrelenmis = tumVeriler;
+        } 
+        else if (filtreTuru === 'buAy') {
+            const ayKodu = String(guncelTarih.getMonth() + 1).padStart(2, '0');
+            const yilKodu = guncelTarih.getFullYear();
+            const aranan = `${yilKodu}-${ayKodu}`;
+            filtrelenmis = tumVeriler.filter(k => k.tarih.startsWith(aranan));
+        }
+        else if (filtreTuru === 'gecenAy') {
+            let gecenAy = guncelTarih.getMonth();
+            let yilKodu = guncelTarih.getFullYear();
+            if (gecenAy === 0) { gecenAy = 12; yilKodu -= 1; }
+            const ayKodu = String(gecenAy).padStart(2, '0');
+            const aranan = `${yilKodu}-${ayKodu}`;
+            filtrelenmis = tumVeriler.filter(k => k.tarih.startsWith(aranan));
+        }
+        else if (filtreTuru === 'son7') {
+            const yediGunOnce = new Date();
+            yediGunOnce.setDate(yediGunOnce.getDate() - 7);
+            
+            filtrelenmis = tumVeriler.filter(k => {
+                const kayitTarihi = new Date(k.tarih);
+                return kayitTarihi >= yediGunOnce && kayitTarihi <= guncelTarih;
+            });
+        }
+        else if (filtreTuru === 'ozel') {
+            const bas = document.getElementById('baslangicTarih').value;
+            const bit = document.getElementById('bitisTarih').value;
+            if(!bas || !bit) return; 
+
+            const basTarih = new Date(bas);
+            const bitTarih = new Date(bit);
+            filtrelenmis = tumVeriler.filter(k => {
+                const kayitTarihi = new Date(k.tarih);
+                return kayitTarihi >= basTarih && kayitTarihi <= bitTarih;
+            });
+        }
+
+        // 2. UZMAN FİLTRESİ
+        if (uzmanTuru !== 'hepsi') {
+            filtrelenmis = filtrelenmis.filter(k => {
+                const odaNo = parseInt(k.alanId) || 1;
+                const tur = (k.rezervasyonTuru || "").toLowerCase();
+                
+                let hocaKey = 'huseyin';
+                if (odaNo === 1) hocaKey = 'huseyin';
+                else if (odaNo === 2) hocaKey = 'irem';
+                else if (odaNo === 3) hocaKey = 'erdogan';
+                else if (odaNo === 4) {
+                    if (tur.includes('kadın') || tur.includes('kadin') || k.cinsiyet === 'kadin') hocaKey = 'muruvet';
+                    else hocaKey = 'erdogan'; 
+                }
+
+                return hocaKey === uzmanTuru;
+            });
+        }
+
+        // 3. CİNSİYET FİLTRESİ (YENİ)
+        if (cinsiyetFiltresi.value !== 'hepsi') {
+            const secilenCinsiyet = cinsiyetFiltresi.value;
+            filtrelenmis = filtrelenmis.filter(k => {
+                const kayitCinsiyet = k.cinsiyet || 'erkek'; // Eski kayıtlarda yoksa varsayılan erkek
+                return kayitCinsiyet === secilenCinsiyet;
+            });
+        }
+
+        grafikleriGuncelle(filtrelenmis);
+    }
+
+    function grafikleriGuncelle(veriSeti) {
+        aktifFiltreliVeri = JSON.parse(JSON.stringify(veriSeti)); 
+
+        let refleksSeans = 0; let hacamatSeans = 0;
+        let refleksCiro = 0; let hacamatCiro = 0;
+        
+        const alanSayaci = { 1: 0, 2: 0, 3: 0, 4: 0 };
+        const cinsiyetSayaci = { erkek: 0, kadin: 0 }; // YENİ
+        const saatSayaci = {};
+        const haftaninGunleri = [0, 0, 0, 0, 0, 0, 0]; 
+
+        const uzmanData = {
+            'huseyin': { ad: 'Hüseyin Hoca', refleks: 0, hacamat: 0, ciro: 0 },
+            'irem': { ad: 'İrem Hoca', refleks: 0, hacamat: 0, ciro: 0 },
+            'erdogan': { ad: 'Erdoğan Hoca', refleks: 0, hacamat: 0, ciro: 0 },
+            'muruvet': { ad: 'Mürüvet Hoca', refleks: 0, hacamat: 0, ciro: 0 }
+        };
+
+        veriSeti.forEach(k => {
+            const odaNo = parseInt(k.alanId) || 1;
+            const tur = (k.rezervasyonTuru || "").toLowerCase();
+            const isHacamat = odaNo === 4 || tur.includes('hacamat') || tur.includes('genel');
+            const cinsiyet = k.cinsiyet || 'erkek';
+
+            // Cinsiyet Sayacı
+            if (cinsiyet === 'kadin') cinsiyetSayaci.kadin++;
+            else cinsiyetSayaci.erkek++;
+
+            let hocaKey = 'huseyin';
+            if (odaNo === 1) hocaKey = 'huseyin';
+            else if (odaNo === 2) hocaKey = 'irem';
+            else if (odaNo === 3) hocaKey = 'erdogan';
+            else if (odaNo === 4) {
+                if (tur.includes('kadın') || tur.includes('kadin') || cinsiyet === 'kadin') hocaKey = 'muruvet';
+                else hocaKey = 'erdogan'; 
+            }
+
+            let islemFiyati = 0;
+            if (isHacamat) {
+                islemFiyati = 2000;
+                hacamatSeans++;
+                hacamatCiro += islemFiyati;
+                uzmanData[hocaKey].hacamat++;
+            } else {
+                islemFiyati = (hocaKey === 'huseyin') ? 5000 : 3000;
+                refleksSeans++;
+                refleksCiro += islemFiyati;
+                uzmanData[hocaKey].refleks++;
+            }
+
+            uzmanData[hocaKey].ciro += islemFiyati;
+            
+            k.uzmanAdCsv = uzmanData[hocaKey].ad;
+            k.tahminiTutar = islemFiyati; 
+
+            alanSayaci[odaNo] = (alanSayaci[odaNo] || 0) + 1;
+            
+            const saat = (k.saat || "00:00").split(':')[0]; 
+            saatSayaci[saat] = (saatSayaci[saat] || 0) + 1;
+
+            const d = new Date(k.tarih);
+            let dayIndex = d.getDay(); 
+            dayIndex = dayIndex === 0 ? 6 : dayIndex - 1; 
+            if(!isNaN(dayIndex)) haftaninGunleri[dayIndex]++;
+        });
+
+        const toplamRez = veriSeti.length || 1; 
+        const yuzdeRefleks = Math.round((refleksSeans / toplamRez) * 100);
+        const yuzdeHacamat = Math.round((hacamatSeans / toplamRez) * 100);
+        const tahminiCiro = refleksCiro + hacamatCiro;
+
+        let enYogunSaat = "-";
+        let maxSaat = 0;
+        for (const [saat, sayi] of Object.entries(saatSayaci)) {
+            if (sayi > maxSaat) { maxSaat = sayi; enYogunSaat = `${saat}:00`; }
+        }
+
+        // KARTLARI YAZDIR
+        document.getElementById('totalRez').innerText = veriSeti.length;
+        document.getElementById('peakHour').innerText = enYogunSaat;
+        document.getElementById('totalRefleks').innerText = refleksSeans;
+        document.getElementById('yuzdeRefleks').innerText = `%${yuzdeRefleks}`;
+        document.getElementById('totalHacamat').innerText = hacamatSeans;
+        document.getElementById('yuzdeHacamat').innerText = `%${yuzdeHacamat}`;
+        document.getElementById('totalCiro').innerText = tahminiCiro.toLocaleString('tr-TR') + " ₺";
+
+        // UZMAN TABLOSU
+        const tbody = document.getElementById('uzmanTabloGovdesi');
+        tbody.innerHTML = '';
+        
+        const hocaSiralama = ['huseyin', 'irem', 'erdogan', 'muruvet'];
+        hocaSiralama.forEach(key => {
+            const u = uzmanData[key];
+            const toplamSeans = u.refleks + u.hacamat;
+            
+            tbody.innerHTML += `
+                <tr>
+                    <td class="text-start ps-4 fw-bold ${toplamSeans > 0 ? 'text-dark' : 'text-muted opacity-50'}">${u.ad}</td>
+                    <td><span class="badge ${u.refleks > 0 ? '' : 'bg-secondary bg-opacity-25 text-muted'}" style="background-color: ${u.refleks > 0 ? 'var(--manu-teal)' : ''};">${u.refleks} Seans</span></td>
+                    <td><span class="badge ${u.hacamat > 0 ? '' : 'bg-secondary bg-opacity-25 text-muted'}" style="background-color: ${u.hacamat > 0 ? 'var(--manu-hacamat)' : ''};">${u.hacamat} Seans</span></td>
+                    <td class="fw-bold ${toplamSeans > 0 ? 'text-secondary' : 'text-muted opacity-50'}">${toplamSeans}</td>
+                    <td class="text-end pe-4 fw-bold" style="color: ${u.ciro > 0 ? 'var(--manu-gold)' : '#adb5bd'}; font-size: 1.1rem;">${u.ciro.toLocaleString('tr-TR')} ₺</td>
+                </tr>
+            `;
+        });
+
+        // --- 1. ODA (ALAN) PASTA GRAFİĞİ ---
+        const alanVerileri = [alanSayaci[1]||0, alanSayaci[2]||0, alanSayaci[3]||0, alanSayaci[4]||0];
+        if (alanChartInst) {
+            alanChartInst.updateSeries(alanVerileri);
+        } else {
+            const alanOptions = {
+                series: alanVerileri,
+                labels: ['Oda 1 (Hüseyin)', 'Oda 2 (İrem)', 'Oda 3 (Erdoğan)', 'Oda 4 (Hacamat)'],
+                chart: { type: 'donut', height: 300 },
+                colors: ['#1a7b83', '#309e9e', '#d9a554', '#8c3a3a'],
+                dataLabels: { enabled: true },
+                legend: { position: 'bottom' }
+            };
+            alanChartInst = new ApexCharts(document.querySelector("#alanGrafik"), alanOptions);
+            alanChartInst.render();
+        }
+
+        // --- 2. CİNSİYET PASTA GRAFİĞİ (YENİ) ---
+        const cinsiyetVerileri = [cinsiyetSayaci.erkek, cinsiyetSayaci.kadin];
+        if (cinsiyetChartInst) {
+            cinsiyetChartInst.updateSeries(cinsiyetVerileri);
+        } else {
+            const cinsiyetOptions = {
+                series: cinsiyetVerileri,
+                labels: ['Erkek Danışan', 'Kadın Danışan'],
+                chart: { type: 'donut', height: 300 },
+                colors: ['#3498db', '#e84393'], // Mavi ve Pembe tonları
+                dataLabels: { enabled: true },
+                legend: { position: 'bottom' }
+            };
+            cinsiyetChartInst = new ApexCharts(document.querySelector("#cinsiyetGrafik"), cinsiyetOptions);
+            cinsiyetChartInst.render();
+        }
+
+        // --- 3. SAAT SÜTUN GRAFİĞİ ---
+        const tumSaatler = ["08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21"];
+        const saatVerileri = tumSaatler.map(s => saatSayaci[s] || 0);
+        const saatEtiketleri = tumSaatler.map(s => `${s}:00`);
+
+        if (saatChartInst) {
+            saatChartInst.updateSeries([{ data: saatVerileri }]);
+        } else {
+            const saatOptions = {
+                series: [{ name: 'Rezervasyon', data: saatVerileri }],
+                chart: { type: 'bar', height: 300, toolbar: { show: false } },
+                colors: ['#2c3e50'],
+                plotOptions: { bar: { borderRadius: 4, columnWidth: '60%' } },
+                dataLabels: { enabled: false },
+                xaxis: { categories: saatEtiketleri },
+                yaxis: { title: { text: 'Adet' }, labels: { formatter: (val) => Math.floor(val) } }
+            };
+            saatChartInst = new ApexCharts(document.querySelector("#saatGrafik"), saatOptions);
+            saatChartInst.render();
+        }
+
+        // --- 4. HAFTANIN GÜNLERİ TREND GRAFİĞİ ---
+        if (haftaChartInst) {
+            haftaChartInst.updateSeries([{ data: haftaninGunleri }]);
+        } else {
+            const haftaOptions = {
+                series: [{ name: 'Rezervasyonlar', data: haftaninGunleri }],
+                chart: { type: 'area', height: 300, toolbar: { show: false } },
+                colors: ['#17a2b8'],
+                fill: { type: "gradient", gradient: { shadeIntensity: 1, opacityFrom: 0.7, opacityTo: 0.2, stops: [0, 90, 100] } },
+                dataLabels: { enabled: true },
+                stroke: { curve: 'smooth', width: 3 },
+                xaxis: { categories: ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'] },
+                yaxis: { labels: { formatter: (val) => Math.floor(val) } }
+            };
+            haftaChartInst = new ApexCharts(document.querySelector("#haftaGrafik"), haftaOptions);
+            haftaChartInst.render();
+        }
+    }
+
+    // --- CSV (EXCEL) İNDİRME FONKSİYONU ---
+    window.csvIndir = function() {
+        if(!aktifFiltreliVeri || aktifFiltreliVeri.length === 0) {
+            alert("İndirilecek veri bulunamadı. Lütfen filtreyi değiştirin.");
+            return;
+        }
+
+        let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
+        
+        csvContent += "Tarih,Saat,Oda No,Danışan Adı,Cinsiyet,İşlem Türü,Uzman Adı,Tahmini Tutar (TL)\n";
+        
+        aktifFiltreliVeri.forEach(k => {
+            const cinsiyetStr = k.cinsiyet === 'kadin' ? 'Kadın' : 'Erkek';
+            const row = `${k.tarih},${k.saat},${k.alanId},"${k.kisiAdi}","${cinsiyetStr}","${k.rezervasyonTuru}","${k.uzmanAdCsv}",${k.tahminiTutar}`;
+            csvContent += row + "\n";
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        
+        const zamanTipi = document.getElementById('zamanFiltresi').value;
+        const uzmanTipi = document.getElementById('uzmanFiltresi').value;
+        const cinsiyetTipi = document.getElementById('cinsiyetFiltresi').value;
+        link.setAttribute("download", `Manuvital_${uzmanTipi}_${cinsiyetTipi}_Rapor_${zamanTipi}.csv`);
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+</script>
