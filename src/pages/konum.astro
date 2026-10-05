@@ -1,0 +1,26 @@
+---
+// src/pages/konum.astro
+---
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Manuvital Terapi Merkezi</title>
+    
+    <!-- WhatsApp Özel Önizleme Etiketleri -->
+    <meta property="og:title" content="Manuvital Terapi Merkezi">
+    <meta property="og:description" content="Kliniğimizin yol tarifi ve harita konumu için tıklayın.">
+    <!-- Aşağıdaki linkin public klasöründe olan ikonunuzun adı olduğuna emin olun -->
+    <meta property="og:image" content="https://rezervasyon.manuvital.com/icon-512.png">
+    <meta property="og:url" content="https://rezervasyon.manuvital.com/konum">
+    <meta property="og:type" content="website">
+
+    <!-- Ekran görüntüsündeki gerçek Google Haritalar linkinize yönlendirme -->
+    <meta http-equiv="refresh" content="0;url=https://maps.app.goo.gl/zApahgSKM97jXJ4n6">
+</head>
+<body>
+    <script>
+        window.location.href = "https://maps.app.goo.gl/zApahgSKM97jXJ4n6";
+    </script>
+</body>
+</html>
