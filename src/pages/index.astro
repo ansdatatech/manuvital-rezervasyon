@@ -476,7 +476,7 @@ if (token) {
                                 const kayitSaat = document.getElementById('kayitSaat').value;
                                 const islemTuru = document.getElementById('kayitTuru').value;
                                 
-                                const wpMesaj = `Sayın ${finalIsim},\n\n${trTarih} tarihi saat ${kayitSaat} için Manuvital Terapi Merkezi'nde ${islemTuru} randevunuz oluşturulmuştur.\n\n📍 Konum: https://maps.google.com/?q=Be%C5%9Ftepe,+Z%C3%BCbeyde+Han%C4%B1m+Cd+56/16,+Yenimahalle/Ankara\n\nSağlıklı günler dileriz.`;
+                                const wpMesaj = `Sayın ${finalIsim},\n\n${trTarih} tarihi saat ${kayitSaat} için Manuvital Terapi Merkezi'nde ${islemTuru} randevunuz oluşturulmuştur.\n\n📍 Konum: https://maps.app.goo.gl/zApahgSKM97jXJ4n6\n\nSağlıklı günler dileriz.`;
                                 
                                 const wpUrl = `https://wa.me/${trNumara}?text=${encodeURIComponent(wpMesaj)}`;
                                 window.open(wpUrl, '_blank');
@@ -524,7 +524,7 @@ if (token) {
                     const wpTel = k.telefon ? k.telefon.replace(/\D/g, '') : '';
                     if (wpTel.length >= 10) {
                         const trNumara = wpTel.startsWith('0') ? '9' + wpTel : '90' + wpTel;
-                        const mesaj = `Sayın ${k.kisiAdi},\n\nHatırlatma: Yarın (${yarinTr}) saat ${k.saat} için Manuvital Terapi Merkezi'nde ${k.rezervasyonTuru} randevunuz bulunmaktadır.\n\n📍 Konum: https://maps.google.com/?q=Be%C5%9Ftepe,+Z%C3%BCbeyde+Han%C4%B1m+Cd+56/16,+Yenimahalle/Ankara\n\nSağlıklı günler dileriz.`;
+                        const mesaj = `Sayın ${k.kisiAdi},\n\nHatırlatma: Yarın (${yarinTr}) saat ${k.saat} için Manuvital Terapi Merkezi'nde ${k.rezervasyonTuru} randevunuz bulunmaktadır.\n\n📍 Konum: https://maps.app.goo.gl/zApahgSKM97jXJ4n6\n\nSağlıklı günler dileriz.`;
                         const wpUrl = `https://wa.me/${trNumara}?text=${encodeURIComponent(mesaj)}`;
 
                         html += `
