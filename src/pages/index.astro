@@ -332,6 +332,19 @@ if (token) {
         return ilkKisim + ' ' + sonKelime;
     }
 
+    // --- YENİ: UZMAN İSİMLERİNİ FORMATLAMA FONKSİYONU ---
+    const uzmanIsimleri = {
+        'huseyin': 'Hüseyin Hoca',
+        'irem': 'İrem Hoca',
+        'erdogan': 'Erdoğan Hoca',
+        'muruvet': 'Mürüvet Hoca'
+    };
+
+    function uzmanFormatla(anahtar) {
+        if (!anahtar) return '-';
+        return uzmanIsimleri[anahtar] || anahtar;
+    }
+
     document.addEventListener("DOMContentLoaded", function() {
         const loginForm = document.getElementById('loginForm');
         if (loginForm) {
@@ -682,7 +695,9 @@ if (token) {
                             
                             const duzgunIsim = isimFormatla(mevcutKayit.kisiAdi);
                             
-                            td.innerHTML = `<div class="h-100 w-100 p-1 ${bgClass}"><span class="rez-name d-block fw-bold text-dark">${duzgunIsim}</span><span class="rez-teacher text-muted d-block small"><i class="fa-solid fa-user-tie me-1"></i>${mevcutKayit.notlar}</span><span class="rez-note d-block small" style="color: var(--manu-teal);"><i class="fa-solid fa-leaf me-1"></i>${mevcutKayit.rezervasyonTuru}</span></div>`;
+                            // YENİ UZMAN İSİM FORMATLAMA BURAYA EKLENDİ
+                            td.innerHTML = `<div class="h-100 w-100 p-1 ${bgClass}"><span class="rez-name d-block fw-bold text-dark">${duzgunIsim}</span><span class="rez-teacher text-muted d-block small"><i class="fa-solid fa-user-tie me-1"></i>${uzmanFormatla(mevcutKayit.notlar)}</span><span class="rez-note d-block small" style="color: var(--manu-teal);"><i class="fa-solid fa-leaf me-1"></i>${mevcutKayit.rezervasyonTuru}</span></div>`;
+                            
                             td.addEventListener('click', () => window.detayModalAc(mevcutKayit, kort, saat));
                         }
                         tr.appendChild(td);
@@ -721,7 +736,7 @@ if (token) {
         document.getElementById('kaydetBtn').innerHTML = '<i class="fa-solid fa-check-double me-2"></i> KAYDET VE BİLDİR';
         document.getElementById('rezModalBaslik').innerHTML = '<i class="fa-solid fa-calendar-plus text-warning me-2"></i>Yeni Randevu';
         
-        const modalOdaIsimleri = ["ODA 1 (Refleks. - Hüseyin)", "ODA 2 (Refleks. - İrem)", "ODA 3 (Refleks. - Erdoğan)", "ODA 4 (Hacamat Odası)"];
+        const modalOdaIsimleri = ["ODA 1 (Hüseyin Hoca)", "ODA 2 (İrem Hoca)", "ODA 3 (Erdoğan Hoca)", "ODA 4 (Hacamat Odası)"];
         document.getElementById('modalKortBadge').innerText = modalOdaIsimleri[kortNo - 1] || `ODA ${kortNo}`;
         document.getElementById('modalSaatBadge').innerText = 'Saat: ' + saat;
         document.getElementById('modalTarihMetni').innerText = document.getElementById('gosterilenTarih').innerText;
@@ -759,7 +774,7 @@ if (token) {
     window.detayModalAc = function(kayit, kortNo, saat) {
         window.aktifIncelenenKayit = kayit; 
         
-        const modalOdaIsimleri = ["ODA 1 (Refleks. - Hüseyin)", "ODA 2 (Refleks. - İrem)", "ODA 3 (Refleks. - Erdoğan)", "ODA 4 (Hacamat Odası)"];
+        const modalOdaIsimleri = ["ODA 1 (Hüseyin Hoca)", "ODA 2 (İrem Hoca)", "ODA 3 (Erdoğan Hoca)", "ODA 4 (Hacamat Odası)"];
         document.getElementById('detayKortBadge').innerText = modalOdaIsimleri[kortNo - 1] || `ODA ${kortNo}`;
         document.getElementById('detaySaatBadge').innerText = 'Saat: ' + saat;
         document.getElementById('detayTarihMetni').innerText = document.getElementById('gosterilenTarih').innerText;
@@ -767,7 +782,10 @@ if (token) {
         document.getElementById('detayTel').innerText = kayit.telefon || 'Belirtilmemiş';
         document.getElementById('detayCinsiyet').innerText = kayit.cinsiyet === 'kadin' ? 'Kadın' : 'Erkek';
         document.getElementById('detayTur').innerText = kayit.rezervasyonTuru || '-';
-        document.getElementById('detayEkleyen').innerText = kayit.notlar;
+        
+        // YENİ UZMAN İSİM FORMATLAMA BURAYA EKLENDİ
+        document.getElementById('detayEkleyen').innerText = uzmanFormatla(kayit.notlar);
+        
         document.getElementById('silinecekKayitId').value = kayit.id;
         
         const simdi = new Date();
@@ -826,7 +844,7 @@ if (token) {
             }
         }
         
-        const modalOdaIsimleri = ["ODA 1 (Refleks. - Hüseyin)", "ODA 2 (Refleks. - İrem)", "ODA 3 (Refleks. - Erdoğan)", "ODA 4 (Hacamat Odası)"];
+        const modalOdaIsimleri = ["ODA 1 (Hüseyin Hoca)", "ODA 2 (İrem Hoca)", "ODA 3 (Erdoğan Hoca)", "ODA 4 (Hacamat Odası)"];
         document.getElementById('modalKortBadge').innerText = modalOdaIsimleri[kortNo - 1] || `ODA ${kortNo}`;
         document.getElementById('modalSaatBadge').innerText = 'Saat: ' + kayit.saat;
         document.getElementById('modalTarihMetni').innerText = document.getElementById('gosterilenTarih').innerText;
