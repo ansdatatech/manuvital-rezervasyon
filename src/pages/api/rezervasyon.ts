@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../db';
 import { rezervasyonlar, musteriler } from '../../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, or } from 'drizzle-orm'; // <-- DİKKAT: 'or' eklendi
 import { jwtVerify } from 'jose';
 
 export const prerender = false;
@@ -75,7 +75,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         const kortNo = parseInt(body.kortNo);
         const cinsiyet = body.cinsiyet || 'erkek';
         
-        // --- AKILLI UZMAN BELİRLEME (Fiziksel Oda ve Cinsiyete Göre) ---
+        // --- AKILLI UZMAN BELİRLEME ---
         let uzmanKey = 'huseyin';
         if (kortNo === 1) uzmanKey = 'huseyin';
         else if (kortNo === 2) uzmanKey = 'irem';
@@ -99,11 +99,15 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         for (let i = 0; i < haftaSayisi; i++) {
             const islenecekTarih = tarihEkle(body.tarih, i * 7);
 
+            // --- YENİ: UZMAN VE ODA ÇAKIŞMA KONTROLÜ ---
             const cakisiyorMu = await db.select().from(rezervasyonlar).where(
                 and(
                     eq(rezervasyonlar.tarih, islenecekTarih), 
                     eq(rezervasyonlar.saat, body.saat), 
-                    eq(rezervasyonlar.alanId, kortNo)
+                    or(
+                        eq(rezervasyonlar.alanId, kortNo), // Eğer ODA doluysa
+                        eq(rezervasyonlar.notlar, uzmanKey) // VEYA bu saatte UZMAN (Erdoğan) başka odada doluysa
+                    )
                 )
             ).limit(1);
 
@@ -141,7 +145,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         }
 
         if (basariliKayitSayisi === 0) {
-            return new Response(JSON.stringify({ error: "Seçtiğiniz saat dilimi tüm haftalar için doludur. Lütfen başka bir saat seçin." }), { status: 400 });
+            return new Response(JSON.stringify({ error: "Seçtiğiniz saatte ya oda doludur ya da atanan uzman başka bir odada meşguldür. Lütfen başka bir saat seçin." }), { status: 400 });
         }
 
         return new Response(JSON.stringify({ 
@@ -178,6 +182,23 @@ export const PUT: APIRoute = async ({ request, cookies }) => {
         if (kortNo === 4) {
             uzmanKey = (cinsiyet === 'kadin') ? 'muruvet' : 'erdogan';
         }
+
+        // --- YENİ EKLENEN UZMAN ÇAKIŞMA KONTROLÜ (DÜZENLEME İÇİN) ---
+        // Eğer cinsiyet değişirse ve uzman Mürüvet yerine Erdoğan (veya tam tersi) olursa:
+        if (uzmanKey !== guncellenecek[0].notlar) {
+            const baskaOdadaMesgulMu = await db.select().from(rezervasyonlar).where(
+                and(
+                    eq(rezervasyonlar.tarih, guncellenecek[0].tarih),
+                    eq(rezervasyonlar.saat, guncellenecek[0].saat),
+                    eq(rezervasyonlar.notlar, uzmanKey)
+                )
+            ).limit(1);
+
+            if (baskaOdadaMesgulMu.length > 0) {
+                return new Response(JSON.stringify({ error: "İşlem başarısız: Atanacak uzman bu saatte başka bir odada meşgul!" }), { status: 400 });
+            }
+        }
+        // ------------------------------------------------------------
 
         await db.update(rezervasyonlar).set({
             kisiAdi: body.kisiAdi, 
