@@ -222,7 +222,7 @@ try {
         </div>
 
         <!-- ALT SATIR: HAFTANIN GÜNLERİ TREND GRAFİĞİ -->
-        <div class="row mb-5">
+        <div class="row mb-4">
             <div class="col-12">
                 <div class="card shadow-sm border-0 rounded-4">
                     <div class="card-header bg-white border-0 pt-4 pb-0">
@@ -235,6 +235,32 @@ try {
             </div>
         </div>
         
+        <!-- YENİ EN ALT SATIR: UZUN VADE TRENDLERİ (Sadece Tüm Zamanlar Seçildiğinde Görünür) -->
+        <div class="row mb-5" id="uzunVadeTrendleri" style="display: none;">
+            <!-- Sol: Haftalık Yoğunluk -->
+            <div class="col-md-6 mb-4 mb-md-0">
+                <div class="card shadow-sm border-0 rounded-4 h-100">
+                    <div class="card-header bg-white border-0 pt-4 pb-0">
+                        <h5 class="fw-bold text-secondary"><i class="fa-solid fa-calendar-week me-2"></i>Haftalık Yoğunluk (Yıl İçi)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="haftalikGrafik" style="width: 100%; min-height: 300px;"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- Sağ: Aylık Yoğunluk -->
+            <div class="col-md-6">
+                <div class="card shadow-sm border-0 rounded-4 h-100">
+                    <div class="card-header bg-white border-0 pt-4 pb-0">
+                        <h5 class="fw-bold text-secondary"><i class="fa-solid fa-calendar-days me-2"></i>Aylık Yoğunluk</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="aylikGrafik" style="width: 100%; min-height: 300px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </Layout>
 
@@ -248,8 +274,20 @@ try {
     let cinsiyetChartInst = null; 
     let saatChartInst = null;
     let haftaChartInst = null; 
+    let aylikChartInst = null;     // YENİ
+    let haftalikChartInst = null;  // YENİ
+    
     let dinamikSaatler = []; 
     const guncelTarih = new Date();
+
+    // Haftanın numarasını (1-52) hesaplayan yardımcı fonksiyon
+    function getIsoWeek(dateObj) {
+        const d = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()));
+        const dayNum = d.getUTCDay() || 7;
+        d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+        const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+        return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+    }
 
     document.addEventListener("DOMContentLoaded", async function() {
         try {
@@ -281,6 +319,9 @@ try {
             const response = await fetch(`/api/rezervasyon?tarih=hepsi`);
             tumVeriler = await response.json();
 
+            // İlk açılışta trend panosu görünürlüğünü kontrol et
+            document.getElementById('uzunVadeTrendleri').style.display = (document.getElementById('zamanFiltresi').value === 'hepsi') ? '' : 'none';
+            
             grafikleriGuncelle(tumVeriler);
 
             // Tüm filtre tetikleyicileri
@@ -301,6 +342,14 @@ try {
         const ozelTarihAlan = document.getElementById('ozelTarihAlan');
         
         let filtrelenmis = [];
+
+        // YENİ: UZUN VADE TREND KUTUSU GÖRÜNÜRLÜĞÜ ("Tüm Zamanlar" için)
+        const trendlerAlan = document.getElementById('uzunVadeTrendleri');
+        if (filtreTuru === 'hepsi') {
+            trendlerAlan.style.display = ''; // Göster
+        } else {
+            trendlerAlan.style.display = 'none'; // Gizle
+        }
 
         // 1. TARİH FİLTRESİ
         if (filtreTuru === 'ozel') {
@@ -391,6 +440,10 @@ try {
         const cinsiyetSayaci = { erkek: 0, kadin: 0 }; 
         const saatSayaci = {};
         const haftaninGunleri = [0, 0, 0, 0, 0, 0, 0]; 
+        
+        // YENİ: UZUN VADE SAYAÇLARI
+        const aylikSayac = new Array(12).fill(0);
+        const haftalikSayac = new Array(53).fill(0);
 
         const uzmanData = {
             'huseyin': { ad: 'Hüseyin Hoca', refleks: 0, hacamat: 0, refleksCiro: 0, hacamatCiro: 0, ciro: 0 },
@@ -434,7 +487,6 @@ try {
             }
 
             uzmanData[hocaKey].ciro += islemFiyati;
-            
             k.uzmanAdCsv = uzmanData[hocaKey].ad;
             k.tahminiTutar = islemFiyati; 
 
@@ -444,9 +496,20 @@ try {
             saatSayaci[saat] = (saatSayaci[saat] || 0) + 1;
 
             const d = new Date(k.tarih);
+            
+            // Haftanın Günleri 
             let dayIndex = d.getDay(); 
             dayIndex = dayIndex === 0 ? 6 : dayIndex - 1; 
             if(!isNaN(dayIndex)) haftaninGunleri[dayIndex]++;
+            
+            // YENİ: Aylar ve Yılın Haftaları
+            const ayIndex = d.getMonth();
+            if(!isNaN(ayIndex)) aylikSayac[ayIndex]++;
+            
+            const haftaNo = getIsoWeek(d);
+            if(!isNaN(haftaNo) && haftaNo >= 1 && haftaNo <= 53) {
+                haftalikSayac[haftaNo - 1]++;
+            }
         });
 
         const toplamRez = veriSeti.length || 1; 
@@ -469,7 +532,7 @@ try {
         document.getElementById('yuzdeHacamat').innerText = `%${yuzdeHacamat}`;
         document.getElementById('totalCiro').innerText = tahminiCiro.toLocaleString('tr-TR') + " ₺";
 
-        // YENİ UZMAN TABLOSU YAPISI (AYRI SÜTUNLARLA)
+        // UZMAN TABLOSU GÜNCELLEMESİ
         const tbody = document.getElementById('uzmanTabloGovdesi');
         tbody.innerHTML = '';
         
@@ -528,7 +591,7 @@ try {
             cinsiyetChartInst.render();
         }
 
-        // --- 3. SAAT SÜTUN GRAFİĞİ (DİNAMİK) ---
+        // --- 3. SAAT SÜTUN GRAFİĞİ ---
         const saatVerileri = dinamikSaatler.map(s => saatSayaci[s] || 0);
         const saatEtiketleri = dinamikSaatler.map(s => `${s}:00`);
 
@@ -565,6 +628,44 @@ try {
             };
             haftaChartInst = new ApexCharts(document.querySelector("#haftaGrafik"), haftaOptions);
             haftaChartInst.render();
+        }
+
+        // --- 5. AYLIK YOĞUNLUK GRAFİĞİ (YENİ) ---
+        const aylarEtiket = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+        if (aylikChartInst) {
+            aylikChartInst.updateSeries([{ data: aylikSayac }]);
+        } else {
+            const aylikOptions = {
+                series: [{ name: 'Seans', data: aylikSayac }],
+                chart: { type: 'bar', height: 300, toolbar: { show: false } },
+                colors: ['#309e9e'],
+                dataLabels: { enabled: true, style: { colors: ['#fff'] } },
+                xaxis: { categories: aylarEtiket },
+                yaxis: { labels: { formatter: (val) => Math.floor(val) } }
+            };
+            aylikChartInst = new ApexCharts(document.querySelector("#aylikGrafik"), aylikOptions);
+            aylikChartInst.render();
+        }
+
+        // --- 6. HAFTALIK YOĞUNLUK GRAFİĞİ (YENİ) ---
+        // Sadece 52 haftayı gösterir.
+        const haftalarEtiket = Array.from({length: 52}, (_, i) => `${i+1}. Hafta`);
+        const haftalikDataGosterim = haftalikSayac.slice(0, 52); 
+
+        if (haftalikChartInst) {
+            haftalikChartInst.updateSeries([{ data: haftalikDataGosterim }]);
+        } else {
+            const haftalikOptions = {
+                series: [{ name: 'Seans', data: haftalikDataGosterim }],
+                chart: { type: 'area', height: 300, toolbar: { show: false } },
+                colors: ['#d9a554'],
+                dataLabels: { enabled: false },
+                stroke: { curve: 'smooth', width: 2 },
+                xaxis: { categories: haftalarEtiket, tickAmount: 10 },
+                yaxis: { labels: { formatter: (val) => Math.floor(val) } }
+            };
+            haftalikChartInst = new ApexCharts(document.querySelector("#haftalikGrafik"), haftalikOptions);
+            haftalikChartInst.render();
         }
     }
 
