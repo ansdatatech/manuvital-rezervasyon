@@ -837,13 +837,33 @@ if (token) {
         if(window.myModal) window.myModal.show(); 
     };
 
-    window.kayitSilOnay = async function() {
+window.kayitSilOnay = async function() {
         const id = document.getElementById('silinecekKayitId').value;
         if(confirm("İptal etmek istediğinize emin misiniz?")) {
             document.getElementById('silBtn').innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> SİLİNİYOR...';
             try {
                 const response = await fetch(`/api/rezervasyon?id=${id}`, { method: 'DELETE' });
                 if (response.ok) {
+                    // --- WHATSAPP İPTAL BİLDİRİMİ BAŞLANGICI ---
+                    const kayit = window.aktifIncelenenKayit;
+                    if (kayit && kayit.telefon) {
+                        const wpTel = kayit.telefon.replace(/\D/g, '');
+                        if (wpTel.length >= 10) {
+                            const trNumara = wpTel.startsWith('0') ? '9' + wpTel : '90' + wpTel;
+                            const [yil, ay, gun] = kayit.tarih.split('-');
+                            
+                            const iptalMesaji = `Sayın ${isimFormatla(kayit.kisiAdi)},\n\n${gun}.${ay}.${yil} tarihi saat ${kayit.saat} için Manuvital Terapi Merkezi'nde bulunan randevunuz iptal edilmiştir.\n\nSağlıklı günler dileriz.`;
+                            
+                            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                            const wpLink = isMobile 
+                                ? `https://api.whatsapp.com/send?phone=${trNumara}&text=${encodeURIComponent(iptalMesaji)}`
+                                : `https://web.whatsapp.com/send?phone=${trNumara}&text=${encodeURIComponent(iptalMesaji)}`;
+                            
+                            window.open(wpLink, '_blank');
+                        }
+                    }
+                    // --- WHATSAPP İPTAL BİLDİRİMİ BİTİŞİ ---
+
                     if(window.detayModal) window.detayModal.hide();
                     await tabloyuCiz();
                 } else alert("Hata oluştu.");
