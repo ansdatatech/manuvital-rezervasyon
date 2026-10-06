@@ -82,7 +82,7 @@ try {
                             <option value="muruvet">Mürüvet Hoca</option>
                         </select>
 
-                        <!-- CİNSİYET FİLTRESİ (YENİ) -->
+                        <!-- CİNSİYET FİLTRESİ -->
                         <span class="fw-bold text-muted ms-md-2"><i class="fa-solid fa-venus-mars me-1"></i> Cinsiyet:</span>
                         <select id="cinsiyetFiltresi" class="form-select form-select-sm w-auto fw-bold shadow-sm border-secondary">
                             <option value="hepsi">Tümü</option>
@@ -192,7 +192,7 @@ try {
                 </div>
             </div>
 
-            <!-- Sağ: Cinsiyet Dağılımı (Pasta - YENİ) -->
+            <!-- Sağ: Cinsiyet Dağılımı (Pasta) -->
             <div class="col-md-6 mb-4">
                 <div class="card shadow-sm border-0 rounded-4 h-100">
                     <div class="card-header bg-white border-0 pt-4 pb-0">
@@ -246,12 +246,12 @@ try {
     let cinsiyetChartInst = null; 
     let saatChartInst = null;
     let haftaChartInst = null; 
-    let dinamikSaatler = []; // YENİ: Ayarlardan gelecek saatleri tutacağımız liste
+    let dinamikSaatler = []; 
     const guncelTarih = new Date();
 
     document.addEventListener("DOMContentLoaded", async function() {
         try {
-            // --- YENİ: AYARLARI ÇEK VE ÇALIŞMA SAATLERİNİ BELİRLE ---
+            // --- AYARLARI ÇEK VE ÇALIŞMA SAATLERİNİ BELİRLE ---
             try {
                 const ayarRes = await fetch('/api/ayarlar-api');
                 if (ayarRes.ok) {
@@ -259,11 +259,10 @@ try {
                     const baslangic = parseInt(ayar.baslangicSaati);
                     const bitis = parseInt(ayar.bitisSaati);
                     for (let i = baslangic; i <= bitis; i++) {
-                        dinamikSaatler.push(i.toString().padStart(2, '0')); // "08", "09" vs...
+                        dinamikSaatler.push(i.toString().padStart(2, '0')); 
                     }
                 }
             } catch (err) {
-                // Ayarlar çekilemezse (ilk kurulum vb.) varsayılan saatler
                 dinamikSaatler = ["08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21"];
             }
             if (dinamikSaatler.length === 0) {
@@ -391,11 +390,12 @@ try {
         const saatSayaci = {};
         const haftaninGunleri = [0, 0, 0, 0, 0, 0, 0]; 
 
+        // UZMAN DATA YAPISI GÜNCELLENDİ (refleksCiro ve hacamatCiro eklendi)
         const uzmanData = {
-            'huseyin': { ad: 'Hüseyin Hoca', refleks: 0, hacamat: 0, ciro: 0 },
-            'irem': { ad: 'İrem Hoca', refleks: 0, hacamat: 0, ciro: 0 },
-            'erdogan': { ad: 'Erdoğan Hoca', refleks: 0, hacamat: 0, ciro: 0 },
-            'muruvet': { ad: 'Mürüvet Hoca', refleks: 0, hacamat: 0, ciro: 0 }
+            'huseyin': { ad: 'Hüseyin Hoca', refleks: 0, hacamat: 0, refleksCiro: 0, hacamatCiro: 0, ciro: 0 },
+            'irem': { ad: 'İrem Hoca', refleks: 0, hacamat: 0, refleksCiro: 0, hacamatCiro: 0, ciro: 0 },
+            'erdogan': { ad: 'Erdoğan Hoca', refleks: 0, hacamat: 0, refleksCiro: 0, hacamatCiro: 0, ciro: 0 },
+            'muruvet': { ad: 'Mürüvet Hoca', refleks: 0, hacamat: 0, refleksCiro: 0, hacamatCiro: 0, ciro: 0 }
         };
 
         veriSeti.forEach(k => {
@@ -423,11 +423,13 @@ try {
                 hacamatSeans++;
                 hacamatCiro += islemFiyati;
                 uzmanData[hocaKey].hacamat++;
+                uzmanData[hocaKey].hacamatCiro += islemFiyati; // Ciro Ayrıştırması
             } else {
                 islemFiyati = (hocaKey === 'huseyin') ? 5000 : 3000;
                 refleksSeans++;
                 refleksCiro += islemFiyati;
                 uzmanData[hocaKey].refleks++;
+                uzmanData[hocaKey].refleksCiro += islemFiyati; // Ciro Ayrıştırması
             }
 
             uzmanData[hocaKey].ciro += islemFiyati;
@@ -466,7 +468,7 @@ try {
         document.getElementById('yuzdeHacamat').innerText = `%${yuzdeHacamat}`;
         document.getElementById('totalCiro').innerText = tahminiCiro.toLocaleString('tr-TR') + " ₺";
 
-        // UZMAN TABLOSU
+        // UZMAN TABLOSU GÜNCELLEMESİ
         const tbody = document.getElementById('uzmanTabloGovdesi');
         tbody.innerHTML = '';
         
@@ -478,8 +480,14 @@ try {
             tbody.innerHTML += `
                 <tr>
                     <td class="text-start ps-4 fw-bold ${toplamSeans > 0 ? 'text-dark' : 'text-muted opacity-50'}">${u.ad}</td>
-                    <td><span class="badge ${u.refleks > 0 ? '' : 'bg-secondary bg-opacity-25 text-muted'}" style="background-color: ${u.refleks > 0 ? 'var(--manu-teal)' : ''};">${u.refleks} Seans</span></td>
-                    <td><span class="badge ${u.hacamat > 0 ? '' : 'bg-secondary bg-opacity-25 text-muted'}" style="background-color: ${u.hacamat > 0 ? 'var(--manu-hacamat)' : ''};">${u.hacamat} Seans</span></td>
+                    <td>
+                        <span class="badge ${u.refleks > 0 ? '' : 'bg-secondary bg-opacity-25 text-muted'}" style="background-color: ${u.refleks > 0 ? 'var(--manu-teal)' : ''};">${u.refleks} Seans</span>
+                        <div class="small fw-bold mt-1" style="color: ${u.refleksCiro > 0 ? 'var(--manu-teal)' : '#adb5bd'};">${u.refleksCiro > 0 ? u.refleksCiro.toLocaleString('tr-TR') + ' ₺' : ''}</div>
+                    </td>
+                    <td>
+                        <span class="badge ${u.hacamat > 0 ? '' : 'bg-secondary bg-opacity-25 text-muted'}" style="background-color: ${u.hacamat > 0 ? 'var(--manu-hacamat)' : ''};">${u.hacamat} Seans</span>
+                        <div class="small fw-bold mt-1" style="color: ${u.hacamatCiro > 0 ? 'var(--manu-hacamat)' : '#adb5bd'};">${u.hacamatCiro > 0 ? u.hacamatCiro.toLocaleString('tr-TR') + ' ₺' : ''}</div>
+                    </td>
                     <td class="fw-bold ${toplamSeans > 0 ? 'text-secondary' : 'text-muted opacity-50'}">${toplamSeans}</td>
                     <td class="text-end pe-4 fw-bold" style="color: ${u.ciro > 0 ? 'var(--manu-gold)' : '#adb5bd'}; font-size: 1.1rem;">${u.ciro.toLocaleString('tr-TR')} ₺</td>
                 </tr>
@@ -520,7 +528,7 @@ try {
             cinsiyetChartInst.render();
         }
 
-        // --- 3. SAAT SÜTUN GRAFİĞİ (YENİ DİNAMİK) ---
+        // --- 3. SAAT SÜTUN GRAFİĞİ (DİNAMİK) ---
         const saatVerileri = dinamikSaatler.map(s => saatSayaci[s] || 0);
         const saatEtiketleri = dinamikSaatler.map(s => `${s}:00`);
 
