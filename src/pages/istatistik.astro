@@ -274,8 +274,8 @@ try {
     let cinsiyetChartInst = null; 
     let saatChartInst = null;
     let haftaChartInst = null; 
-    let aylikChartInst = null;     // YENİ
-    let haftalikChartInst = null;  // YENİ
+    let aylikChartInst = null;     
+    let haftalikChartInst = null;  
     
     let dinamikSaatler = []; 
     const guncelTarih = new Date();
@@ -532,14 +532,29 @@ try {
         document.getElementById('yuzdeHacamat').innerText = `%${yuzdeHacamat}`;
         document.getElementById('totalCiro').innerText = tahminiCiro.toLocaleString('tr-TR') + " ₺";
 
-        // UZMAN TABLOSU GÜNCELLEMESİ
+        // UZMAN TABLOSU GÜNCELLEMESİ (GENEL TOPLAM EKLENDİ)
         const tbody = document.getElementById('uzmanTabloGovdesi');
         tbody.innerHTML = '';
         
+        let genelRefleksAdet = 0;
+        let genelRefleksCiro = 0;
+        let genelHacamatAdet = 0;
+        let genelHacamatCiro = 0;
+        let genelToplamSeans = 0;
+        let genelToplamCiro = 0;
+
         const hocaSiralama = ['huseyin', 'irem', 'erdogan', 'muruvet'];
         hocaSiralama.forEach(key => {
             const u = uzmanData[key];
             const toplamSeans = u.refleks + u.hacamat;
+            
+            // Genel Toplam Sayaçlarına Ekle
+            genelRefleksAdet += u.refleks;
+            genelRefleksCiro += u.refleksCiro;
+            genelHacamatAdet += u.hacamat;
+            genelHacamatCiro += u.hacamatCiro;
+            genelToplamSeans += toplamSeans;
+            genelToplamCiro += u.ciro;
             
             tbody.innerHTML += `
                 <tr>
@@ -556,6 +571,22 @@ try {
                 </tr>
             `;
         });
+
+        // GENEL TOPLAM SATIRI
+        tbody.innerHTML += `
+            <tr class="bg-light" style="border-top: 2px solid #dee2e6;">
+                <td class="text-start ps-4 fw-bold text-dark text-uppercase">Genel Toplam</td>
+                
+                <td><span class="badge shadow-sm" style="background-color: var(--manu-teal);">${genelRefleksAdet} Seans</span></td>
+                <td class="fw-bold" style="color: var(--manu-teal);">${genelRefleksCiro > 0 ? genelRefleksCiro.toLocaleString('tr-TR') + ' ₺' : '-'}</td>
+                
+                <td><span class="badge shadow-sm" style="background-color: var(--manu-hacamat);">${genelHacamatAdet} Seans</span></td>
+                <td class="fw-bold" style="color: var(--manu-hacamat);">${genelHacamatCiro > 0 ? genelHacamatCiro.toLocaleString('tr-TR') + ' ₺' : '-'}</td>
+                
+                <td class="fw-bold text-dark fs-5">${genelToplamSeans}</td>
+                <td class="text-end pe-4 fw-bold" style="color: var(--manu-gold); font-size: 1.25rem;">${genelToplamCiro > 0 ? genelToplamCiro.toLocaleString('tr-TR') + ' ₺' : '-'}</td>
+            </tr>
+        `;
 
         // --- 1. ODA (ALAN) PASTA GRAFİĞİ ---
         const alanVerileri = [alanSayaci[1]||0, alanSayaci[2]||0, alanSayaci[3]||0, alanSayaci[4]||0];
@@ -630,7 +661,7 @@ try {
             haftaChartInst.render();
         }
 
-        // --- 5. AYLIK YOĞUNLUK GRAFİĞİ (YENİ) ---
+        // --- 5. AYLIK YOĞUNLUK GRAFİĞİ ---
         const aylarEtiket = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
         if (aylikChartInst) {
             aylikChartInst.updateSeries([{ data: aylikSayac }]);
@@ -647,8 +678,7 @@ try {
             aylikChartInst.render();
         }
 
-        // --- 6. HAFTALIK YOĞUNLUK GRAFİĞİ (YENİ) ---
-        // Sadece 52 haftayı gösterir.
+        // --- 6. HAFTALIK YOĞUNLUK GRAFİĞİ ---
         const haftalarEtiket = Array.from({length: 52}, (_, i) => `${i+1}. Hafta`);
         const haftalikDataGosterim = haftalikSayac.slice(0, 52); 
 
