@@ -243,13 +243,34 @@ try {
     let tumVeriler = [];
     let aktifFiltreliVeri = []; 
     let alanChartInst = null;
-    let cinsiyetChartInst = null; // YENİ
+    let cinsiyetChartInst = null; 
     let saatChartInst = null;
     let haftaChartInst = null; 
+    let dinamikSaatler = []; // YENİ: Ayarlardan gelecek saatleri tutacağımız liste
     const guncelTarih = new Date();
 
     document.addEventListener("DOMContentLoaded", async function() {
         try {
+            // --- YENİ: AYARLARI ÇEK VE ÇALIŞMA SAATLERİNİ BELİRLE ---
+            try {
+                const ayarRes = await fetch('/api/ayarlar-api');
+                if (ayarRes.ok) {
+                    const ayar = await ayarRes.json();
+                    const baslangic = parseInt(ayar.baslangicSaati);
+                    const bitis = parseInt(ayar.bitisSaati);
+                    for (let i = baslangic; i <= bitis; i++) {
+                        dinamikSaatler.push(i.toString().padStart(2, '0')); // "08", "09" vs...
+                    }
+                }
+            } catch (err) {
+                // Ayarlar çekilemezse (ilk kurulum vb.) varsayılan saatler
+                dinamikSaatler = ["08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21"];
+            }
+            if (dinamikSaatler.length === 0) {
+                 dinamikSaatler = ["08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21"];
+            }
+            // --------------------------------------------------------
+
             const aylar = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
             const mevcutAy = guncelTarih.getMonth();
             
@@ -264,7 +285,7 @@ try {
             // Tüm filtre tetikleyicileri
             document.getElementById('zamanFiltresi').addEventListener('change', filtreUygula);
             document.getElementById('uzmanFiltresi').addEventListener('change', filtreUygula);
-            document.getElementById('cinsiyetFiltresi').addEventListener('change', filtreUygula); // YENİ
+            document.getElementById('cinsiyetFiltresi').addEventListener('change', filtreUygula); 
             document.getElementById('ozelTarihUygula').addEventListener('click', filtreUygula);
 
         } catch (error) {
@@ -275,7 +296,7 @@ try {
     function filtreUygula() {
         const filtreTuru = document.getElementById('zamanFiltresi').value;
         const uzmanTuru = document.getElementById('uzmanFiltresi').value; 
-        const cinsiyetTuru = document.getElementById('cinsiyetFiltresi').value; // YENİ
+        const cinsiyetTuru = document.getElementById('cinsiyetFiltresi').value; 
         const ozelTarihAlan = document.getElementById('ozelTarihAlan');
         
         let filtrelenmis = [];
@@ -347,11 +368,11 @@ try {
             });
         }
 
-        // 3. CİNSİYET FİLTRESİ (YENİ)
+        // 3. CİNSİYET FİLTRESİ 
         if (cinsiyetFiltresi.value !== 'hepsi') {
             const secilenCinsiyet = cinsiyetFiltresi.value;
             filtrelenmis = filtrelenmis.filter(k => {
-                const kayitCinsiyet = k.cinsiyet || 'erkek'; // Eski kayıtlarda yoksa varsayılan erkek
+                const kayitCinsiyet = k.cinsiyet || 'erkek'; 
                 return kayitCinsiyet === secilenCinsiyet;
             });
         }
@@ -366,7 +387,7 @@ try {
         let refleksCiro = 0; let hacamatCiro = 0;
         
         const alanSayaci = { 1: 0, 2: 0, 3: 0, 4: 0 };
-        const cinsiyetSayaci = { erkek: 0, kadin: 0 }; // YENİ
+        const cinsiyetSayaci = { erkek: 0, kadin: 0 }; 
         const saatSayaci = {};
         const haftaninGunleri = [0, 0, 0, 0, 0, 0, 0]; 
 
@@ -482,7 +503,7 @@ try {
             alanChartInst.render();
         }
 
-        // --- 2. CİNSİYET PASTA GRAFİĞİ (YENİ) ---
+        // --- 2. CİNSİYET PASTA GRAFİĞİ ---
         const cinsiyetVerileri = [cinsiyetSayaci.erkek, cinsiyetSayaci.kadin];
         if (cinsiyetChartInst) {
             cinsiyetChartInst.updateSeries(cinsiyetVerileri);
@@ -491,7 +512,7 @@ try {
                 series: cinsiyetVerileri,
                 labels: ['Erkek Danışan', 'Kadın Danışan'],
                 chart: { type: 'donut', height: 300 },
-                colors: ['#3498db', '#e84393'], // Mavi ve Pembe tonları
+                colors: ['#3498db', '#e84393'], 
                 dataLabels: { enabled: true },
                 legend: { position: 'bottom' }
             };
@@ -499,12 +520,12 @@ try {
             cinsiyetChartInst.render();
         }
 
-        // --- 3. SAAT SÜTUN GRAFİĞİ ---
-        const tumSaatler = ["08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21"];
-        const saatVerileri = tumSaatler.map(s => saatSayaci[s] || 0);
-        const saatEtiketleri = tumSaatler.map(s => `${s}:00`);
+        // --- 3. SAAT SÜTUN GRAFİĞİ (YENİ DİNAMİK) ---
+        const saatVerileri = dinamikSaatler.map(s => saatSayaci[s] || 0);
+        const saatEtiketleri = dinamikSaatler.map(s => `${s}:00`);
 
         if (saatChartInst) {
+            saatChartInst.updateOptions({ xaxis: { categories: saatEtiketleri } });
             saatChartInst.updateSeries([{ data: saatVerileri }]);
         } else {
             const saatOptions = {
