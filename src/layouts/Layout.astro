@@ -134,8 +134,8 @@ const { title } = Astro.props;
             const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
             const hasClosedPrompt = localStorage.getItem('manuvitalPwaClosed');
 
-            // iOS Safari Tespiti
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            // YENİ: Apple'ın Yeni Nesil iPadOS ve iOS Tarayıcı Tespiti
+            const isIOS = (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) && !window.MSStream;
 
             if (isIOS && !isStandalone && !hasClosedPrompt) {
                 // iPhone/iPad için yönlendirici metin
@@ -143,8 +143,9 @@ const { title } = Astro.props;
                 installBtn.style.display = 'none'; // iOS otomatik butona izin vermez
                 
                 setTimeout(() => {
+                    pwaPrompt.style.display = 'block'; // Gizliliği kesin olarak kaldır
                     pwaPrompt.classList.add('pwa-popup-show');
-                }, 2000);
+                }, 1500); // 1.5 saniye sonra göster
             }
 
             // Android Chrome Tespiti
@@ -154,8 +155,9 @@ const { title } = Astro.props;
                 
                 if (!hasClosedPrompt && !isStandalone) {
                     setTimeout(() => {
+                        pwaPrompt.style.display = 'block';
                         pwaPrompt.classList.add('pwa-popup-show');
-                    }, 2000);
+                    }, 1500);
                 }
             });
 
