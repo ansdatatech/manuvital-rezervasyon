@@ -151,13 +151,14 @@ if (token) {
             <div class="container mt-3">
                 <div class="date-navigator shadow-sm rounded-4 bg-white mb-3">
                     <button type="button" id="dunBtn" class="date-btn text-muted"><i class="fa-solid fa-chevron-left"></i> Dün</button>
+                    <!-- YENİ iOS UYUMLU TARİH SEÇİCİ KUTUSU -->
                     <div style="position: relative; flex-grow: 1; text-align: center; cursor: pointer;" id="tarihSeciciAlan">
-                        <h3 class="current-date" style="color: var(--manu-teal);">
+                        <h3 class="current-date" style="color: var(--manu-teal); position: relative; z-index: 1;">
                             <i class="fa-regular fa-calendar-days me-2"></i>
                             <span id="gosterilenTarih"></span>
                             <i class="fa-solid fa-caret-down ms-2" style="font-size: 0.8rem; opacity: 0.5;"></i>
                         </h3>
-                        <input type="date" id="gizliTakvim" style="position: absolute; top: 0; left: 50%; opacity: 0; width: 1px; height: 1px; border: none; pointer-events: none;">
+                        <input type="date" id="gizliTakvim" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 2; margin: 0; padding: 0;">
                     </div>
                     <button type="button" id="yarinBtn" class="date-btn text-muted">Yarın <i class="fa-solid fa-chevron-right"></i></button>
                 </div>
@@ -332,7 +333,7 @@ if (token) {
         return ilkKisim + ' ' + sonKelime;
     }
 
-    // --- YENİ: UZMAN İSİMLERİNİ FORMATLAMA FONKSİYONU ---
+    // --- UZMAN İSİMLERİNİ FORMATLAMA FONKSİYONU ---
     const uzmanIsimleri = {
         'huseyin': 'Hüseyin Hoca',
         'irem': 'İrem Hoca',
@@ -378,7 +379,8 @@ if (token) {
 
             document.getElementById('dunBtn').addEventListener('click', () => tarihDegistir(-1));
             document.getElementById('yarinBtn').addEventListener('click', () => tarihDegistir(1));
-            document.getElementById('tarihSeciciAlan').addEventListener('click', () => document.getElementById('gizliTakvim').showPicker());
+            
+            // iOS UYUMLU DOĞAL TAKVİM SEÇİCİ
             document.getElementById('gizliTakvim').addEventListener('change', (e) => tarihiGuncelle(e.target.value));
 
             document.querySelectorAll('input[name="cinsiyetSecim"]').forEach(radio => {
@@ -491,7 +493,11 @@ if (token) {
                                 
                                 const wpMesaj = `Sayın ${finalIsim},\n\n${trTarih} tarihi saat ${kayitSaat} için Manuvital Terapi Merkezi'nde ${islemTuru} randevunuz oluşturulmuştur.\n\n📍 Konum: https://rezervasyon.manuvital.com/konum\n\nSağlıklı günler dileriz.`;
                                 
-                                const wpUrl = `https://wa.me/${trNumara}?text=${encodeURIComponent(wpMesaj)}`;
+                                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                                const wpUrl = isMobile 
+                                    ? `https://api.whatsapp.com/send?phone=${trNumara}&text=${encodeURIComponent(wpMesaj)}`
+                                    : `https://web.whatsapp.com/send?phone=${trNumara}&text=${encodeURIComponent(wpMesaj)}`;
+                                
                                 window.open(wpUrl, '_blank');
                             }
                         }
@@ -509,7 +515,7 @@ if (token) {
         }
     });
 
-    // YENİ: YARININ HATIRLATMALARI FONKSİYONU
+    // YARININ HATIRLATMALARI FONKSİYONU
     window.yarinHatirlatmalariAc = async function() {
         const btn = document.getElementById('hatirlatmaBtn');
         if(btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Hazırlanıyor...';
@@ -538,7 +544,11 @@ if (token) {
                     if (wpTel.length >= 10) {
                         const trNumara = wpTel.startsWith('0') ? '9' + wpTel : '90' + wpTel;
                         const mesaj = `Sayın ${k.kisiAdi},\n\nHatırlatma: Yarın (${yarinTr}) saat ${k.saat} için Manuvital Terapi Merkezi'nde ${k.rezervasyonTuru} randevunuz bulunmaktadır.\n\n📍 Konum: https://rezervasyon.manuvital.com/konum\n\nSağlıklı günler dileriz.`;
-                        const wpUrl = `https://wa.me/${trNumara}?text=${encodeURIComponent(mesaj)}`;
+                        
+                        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                        const wpUrl = isMobile 
+                            ? `https://api.whatsapp.com/send?phone=${trNumara}&text=${encodeURIComponent(mesaj)}`
+                            : `https://web.whatsapp.com/send?phone=${trNumara}&text=${encodeURIComponent(mesaj)}`;
 
                         html += `
                             <li class="list-group-item d-flex justify-content-between align-items-center py-3">
@@ -695,7 +705,7 @@ if (token) {
                             
                             const duzgunIsim = isimFormatla(mevcutKayit.kisiAdi);
                             
-                            // YENİ UZMAN İSİM FORMATLAMA BURAYA EKLENDİ
+                            // UZMAN İSİM FORMATLAMA
                             td.innerHTML = `<div class="h-100 w-100 p-1 ${bgClass}"><span class="rez-name d-block fw-bold text-dark">${duzgunIsim}</span><span class="rez-teacher text-muted d-block small"><i class="fa-solid fa-user-tie me-1"></i>${uzmanFormatla(mevcutKayit.notlar)}</span><span class="rez-note d-block small" style="color: var(--manu-teal);"><i class="fa-solid fa-leaf me-1"></i>${mevcutKayit.rezervasyonTuru}</span></div>`;
                             
                             td.addEventListener('click', () => window.detayModalAc(mevcutKayit, kort, saat));
@@ -783,7 +793,7 @@ if (token) {
         document.getElementById('detayCinsiyet').innerText = kayit.cinsiyet === 'kadin' ? 'Kadın' : 'Erkek';
         document.getElementById('detayTur').innerText = kayit.rezervasyonTuru || '-';
         
-        // YENİ UZMAN İSİM FORMATLAMA BURAYA EKLENDİ
+        // UZMAN İSİM FORMATLAMA
         document.getElementById('detayEkleyen').innerText = uzmanFormatla(kayit.notlar);
         
         document.getElementById('silinecekKayitId').value = kayit.id;
@@ -855,14 +865,13 @@ if (token) {
         if(window.myModal) window.myModal.show(); 
     };
 
-window.kayitSilOnay = async function() {
+    window.kayitSilOnay = async function() {
         const id = document.getElementById('silinecekKayitId').value;
         if(confirm("İptal etmek istediğinize emin misiniz?")) {
             document.getElementById('silBtn').innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> SİLİNİYOR...';
             try {
                 const response = await fetch(`/api/rezervasyon?id=${id}`, { method: 'DELETE' });
                 if (response.ok) {
-                    // --- WHATSAPP İPTAL BİLDİRİMİ BAŞLANGICI ---
                     const kayit = window.aktifIncelenenKayit;
                     if (kayit && kayit.telefon) {
                         const wpTel = kayit.telefon.replace(/\D/g, '');
@@ -880,7 +889,6 @@ window.kayitSilOnay = async function() {
                             window.open(wpLink, '_blank');
                         }
                     }
-                    // --- WHATSAPP İPTAL BİLDİRİMİ BİTİŞİ ---
 
                     if(window.detayModal) window.detayModal.hide();
                     await tabloyuCiz();
