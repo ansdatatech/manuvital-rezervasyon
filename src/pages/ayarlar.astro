@@ -8,14 +8,22 @@ if (!token) {
     return Astro.redirect('/');
 }
 
+let rol = '';
+let aktifRol = '';
+let aktifKullanici = '';
+
 try {
     const decoded = decodeJwt(token);
+    rol = decoded.rol as string;
+    aktifRol = decoded.rol as string;
+    aktifKullanici = decoded.kullaniciAdi as string;
 } catch (error) {
     return Astro.redirect('/');
 }
 ---
 
 <Layout title="Ayarlar ve İzinler | Manuvital Terapi Merkezi">
+    <div id="authVerileri" data-kullanici={aktifKullanici} data-rol={aktifRol} class="d-none"></div>
 
     <div class="text-white p-2 d-flex justify-content-between align-items-center" style="background-color: #111; border-bottom: 3px solid var(--manu-gold);">
         <div class="container d-flex justify-content-between align-items-center">
@@ -163,28 +171,40 @@ try {
                     </div>
                 </div>
 
-                <div class="card shadow-sm border-0 rounded-4">
-                    <div class="card-header bg-white border-0 pt-4 pb-0">
-                        <h5 class="fw-bold" style="color: var(--manu-teal);"><i class="fa-solid fa-users-gear me-2"></i>Sistem Kullanıcıları</h5>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle m-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th class="ps-4">İsim Soyisim</th>
-                                        <th>Kullanıcı Adı</th>
-                                        <th>Rol / Yetki</th>
-                                        <th class="text-end pe-4">İşlem</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="personelTabloGövdesi">
-                                    <tr><td colspan="4" class="text-center py-4 text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i> Yükleniyor...</td></tr>
-                                </tbody>
-                            </table>
+                <!-- YENİ: ROL BAZLI SİSTEM KULLANICILARI ALANI -->
+                {rol === 'yonetici' ? (
+                    <div class="card shadow-sm border-0 rounded-4">
+                        <div class="card-header bg-white border-0 pt-4 pb-0">
+                            <h5 class="fw-bold" style="color: var(--manu-teal);"><i class="fa-solid fa-users-gear me-2"></i>Sistem Kullanıcıları</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle m-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="ps-4">İsim Soyisim</th>
+                                            <th>Kullanıcı Adı</th>
+                                            <th>Rol / Yetki</th>
+                                            <th class="text-end pe-4">İşlem</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="personelTabloGövdesi">
+                                        <tr><td colspan="4" class="text-center py-4 text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i> Yükleniyor...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
-                </div>
+                ) : (
+                    <div class="card shadow-sm border-0 rounded-4" style="background-color: #f8f9fa; border-left: 4px solid #6c757d !important;">
+                        <div class="card-body text-center p-5">
+                            <i class="fa-solid fa-user-shield fs-1 text-muted mb-3" style="opacity: 0.3;"></i>
+                            <h5 class="fw-bold" style="color: var(--manu-teal);">Kısıtlı Alan</h5>
+                            <p class="text-muted small mb-0">Sistem kullanıcılarını görüntüleme, şifre belirleme ve yetki düzenleme işlemleri sadece <strong class="text-dark">Yönetici</strong> hesapları tarafından yapılabilir.</p>
+                        </div>
+                    </div>
+                )}
+                
             </div>
 
         </div>
@@ -216,7 +236,13 @@ try {
 
 <script is:inline>
     document.addEventListener("DOMContentLoaded", function() {
-        personelleriGetir();
+        window.aktifRol = document.getElementById('authVerileri').getAttribute('data-rol');
+        
+        // YENİ: EĞER GİREN YÖNETİCİYSE PERSONELLERİ GETİR
+        if (window.aktifRol === 'yonetici') {
+            personelleriGetir();
+        }
+        
         ayarlariGetir(); 
         izinleriGetir(); 
 
@@ -236,61 +262,74 @@ try {
             });
         });
 
-        document.getElementById('personelFormu').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('pKaydetBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> OLUŞTURULUYOR...';
-
-            try {
-                const response = await fetch('/api/kullanici', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        rol: document.getElementById('pRol').value,
-                        kullaniciAdi: document.getElementById('pKullaniciAdi').value,
-                        adSoyad: document.getElementById('pAdSoyad').value,
-                        sifre: document.getElementById('pSifre').value
-                    })
-                });
-
-                if (response.ok) {
-                    document.getElementById('personelFormu').reset();
-                    personelleriGetir();
-                    alert("Hesap başarıyla oluşturuldu!");
-                } else {
-                    const data = await response.json();
-                    alert(data.error || "Hata oluştu.");
-                }
-            } catch (err) {
-                alert("Sunucuya ulaşılamadı.");
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = 'HESAP OLUŞTUR';
-            }
-        });
-
-        document.getElementById('adminSifreFormu').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('adminSifreKaydetBtn');
-            btn.innerHTML = 'BEKLEYİN...'; btn.disabled = true;
-            
-            try {
-                const res = await fetch('/api/kullanici', {
-                    method: 'PUT', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        id: document.getElementById('sifirlanacakId').value,
-                        yeniSifre: document.getElementById('yeniSifreAdmin').value
-                    })
-                });
+        // EĞER KİŞİ YÖNETİCİ DEĞİLSE PERSONEL FORMU (YENİ HESAP EKLEME) ÇALIŞMASIN
+        const personelFormu = document.getElementById('personelFormu');
+        if (personelFormu) {
+            personelFormu.addEventListener('submit', async (e) => {
+                e.preventDefault();
                 
-                if(res.ok) {
-                    bootstrap.Modal.getInstance(document.getElementById('adminSifreModal')).hide();
-                    alert("Kullanıcının şifresi başarıyla sıfırlandı!");
-                } else alert("Hata oluştu.");
-            } catch(err) { alert("Sunucu hatası."); } 
-            finally { btn.innerHTML = 'ŞİFREYİ GÜNCELLE'; btn.disabled = false; }
-        });
+                if (window.aktifRol !== 'yonetici') {
+                    alert("Yeni hesap oluşturma yetkiniz bulunmuyor.");
+                    return;
+                }
+                
+                const btn = document.getElementById('pKaydetBtn');
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> OLUŞTURULUYOR...';
+
+                try {
+                    const response = await fetch('/api/kullanici', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            rol: document.getElementById('pRol').value,
+                            kullaniciAdi: document.getElementById('pKullaniciAdi').value,
+                            adSoyad: document.getElementById('pAdSoyad').value,
+                            sifre: document.getElementById('pSifre').value
+                        })
+                    });
+
+                    if (response.ok) {
+                        document.getElementById('personelFormu').reset();
+                        personelleriGetir();
+                        alert("Hesap başarıyla oluşturuldu!");
+                    } else {
+                        const data = await response.json();
+                        alert(data.error || "Hata oluştu.");
+                    }
+                } catch (err) {
+                    alert("Sunucuya ulaşılamadı.");
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = 'HESAP OLUŞTUR';
+                }
+            });
+        }
+
+        const adminSifreFormu = document.getElementById('adminSifreFormu');
+        if (adminSifreFormu) {
+            adminSifreFormu.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = document.getElementById('adminSifreKaydetBtn');
+                btn.innerHTML = 'BEKLEYİN...'; btn.disabled = true;
+                
+                try {
+                    const res = await fetch('/api/kullanici', {
+                        method: 'PUT', headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            id: document.getElementById('sifirlanacakId').value,
+                            yeniSifre: document.getElementById('yeniSifreAdmin').value
+                        })
+                    });
+                    
+                    if(res.ok) {
+                        bootstrap.Modal.getInstance(document.getElementById('adminSifreModal')).hide();
+                        alert("Kullanıcının şifresi başarıyla sıfırlandı!");
+                    } else alert("Hata oluştu.");
+                } catch(err) { alert("Sunucu hatası."); } 
+                finally { btn.innerHTML = 'ŞİFREYİ GÜNCELLE'; btn.disabled = false; }
+            });
+        }
 
         document.getElementById('saatAyarlariFormu').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -314,7 +353,7 @@ try {
             finally { btn.innerHTML = '<i class="fa-solid fa-save me-2"></i>SAATLERİ KAYDET'; btn.disabled = false; }
         });
         
-        // AKILLI İZİN EKLEME: Aralık seçilirse araya _ koyarak tek kayıt olarak gönderir
+        // AKILLI İZİN EKLEME
         document.getElementById('izinFormu').addEventListener('submit', async (e) => {
             e.preventDefault();
             let tip = document.querySelector('input[name="izinTipi"]:checked').value;
@@ -368,7 +407,6 @@ try {
 
             const gunIsimleri = ["Her Pazar", "Her Pazartesi", "Her Salı", "Her Çarşamba", "Her Perşembe", "Her Cuma", "Her Cumartesi"];
             
-            // ESKİ KAYITLAR (1,2,3) İÇİN DE YAMA (FALLBACK) EKLENDİ
             const kisiIsimleri = {
                 "TUM": "Tüm Klinik Kapalı", 
                 "huseyin": "Hüseyin H.", "irem": "İrem H.", "erdogan": "Erdoğan H.", "muruvet": "Mürüvet H.",
@@ -425,6 +463,8 @@ try {
 
     async function personelleriGetir() {
         const tbody = document.getElementById('personelTabloGövdesi');
+        if (!tbody) return;
+        
         try {
             const response = await fetch('/api/kullanici');
             const kullanicilar = await response.json();
@@ -449,12 +489,12 @@ try {
             });
         } catch (err) { tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Bağlantı hatası!</td></tr>'; }
     }
+    
     window.sifreSifirlaModalAc = function(id, adSoyad) {
         document.getElementById('sifirlanacakId').value = id;
         document.getElementById('sifirlanacakKisi').innerText = adSoyad;
         document.getElementById('yeniSifreAdmin').value = '';
         
-        // Modalı aç
         const modalEl = document.getElementById('adminSifreModal');
         if(modalEl) {
             const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
