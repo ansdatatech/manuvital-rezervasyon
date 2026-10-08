@@ -9,9 +9,7 @@ let rol = '';
 try {
     const decoded = decodeJwt(token);
     rol = decoded.rol as string;
-    if (rol !== 'yonetici' && rol !== 'sekreter') {
-        return Astro.redirect('/');
-    }
+    // Güvenlik duvarı (if şartı) buradan kaldırıldı. Artık uzmanlar da girebilir.
 } catch (error) {
     return Astro.redirect('/');
 }

@@ -8,12 +8,8 @@ if (!token) {
     return Astro.redirect('/');
 }
 
-// Güvenlik: Sadece YÖNETİCİ girebilir
 try {
     const decoded = decodeJwt(token);
-    if (decoded.rol !== 'yonetici') {
-        return Astro.redirect('/');
-    }
 } catch (error) {
     return Astro.redirect('/');
 }
