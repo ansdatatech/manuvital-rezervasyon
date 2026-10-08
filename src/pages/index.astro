@@ -116,12 +116,10 @@ if (token) {
                     </div>
                     <div class="d-flex align-items-center flex-wrap gap-2">
                         
-                        <!-- YENİ: YARININ HATIRLATMALARI BUTONU -->
-                        {rol !== 'uzman' && (
-                            <button id="hatirlatmaBtn" class="btn btn-sm btn-success fw-bold shadow-sm" onclick="window.yarinHatirlatmalariAc()">
-                                <i class="fa-brands fa-whatsapp"></i> Yarının Hatırlatmaları
-                            </button>
-                        )}
+                        <!-- YENİ: YARININ HATIRLATMALARI BUTONU (Artık uzmanlar da görecek) -->
+                        <button id="hatirlatmaBtn" class="btn btn-sm btn-success fw-bold shadow-sm" onclick="window.yarinHatirlatmalariAc()">
+                            <i class="fa-brands fa-whatsapp"></i> Yarının Hatırlatmaları
+                        </button>
 
                         <button class="btn btn-sm btn-outline-secondary fw-bold shadow-sm" onclick="new bootstrap.Modal(document.getElementById('sifreModal')).show()">
                             <i class="fa-solid fa-key"></i> Şifre Değiştir
@@ -139,11 +137,10 @@ if (token) {
                             </a>
                         )}
 
-                        {rol !== 'uzman' && (
-                            <a href="/rehber" class="btn btn-sm btn-outline-dark fw-bold shadow-sm">
-                                <i class="fa-solid fa-address-book" style="color: var(--manu-gold);"></i> Rehber
-                            </a>
-                        )}
+                        <!-- Rehberi de uzmanlara açtık -->
+                        <a href="/rehber" class="btn btn-sm btn-outline-dark fw-bold shadow-sm">
+                            <i class="fa-solid fa-address-book" style="color: var(--manu-gold);"></i> Rehber
+                        </a>
                     </div>
                 </div>
             </div>
@@ -158,6 +155,7 @@ if (token) {
                             <span id="gosterilenTarih"></span>
                             <i class="fa-solid fa-caret-down ms-2" style="font-size: 0.8rem; opacity: 0.5;"></i>
                         </h3>
+                        <!-- Hem mobilde hem masaüstünde çalışan hibrit yapı -->
                         <input type="date" id="gizliTakvim" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 2; margin: 0; padding: 0;">
                     </div>
                     <button type="button" id="yarinBtn" class="date-btn text-muted">Yarın <i class="fa-solid fa-chevron-right"></i></button>
@@ -289,7 +287,7 @@ if (token) {
                 </div>
             </div>
 
-            <!-- YENİ: 1 GÜN ÖNCESİ HATIRLATMA MODALI -->
+            <!-- 1 GÜN ÖNCESİ HATIRLATMA MODALI -->
             <div class="modal fade" id="hatirlatmaModal" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
                     <div class="modal-content rounded-4 border-0 shadow-lg">
@@ -380,8 +378,17 @@ if (token) {
             document.getElementById('dunBtn').addEventListener('click', () => tarihDegistir(-1));
             document.getElementById('yarinBtn').addEventListener('click', () => tarihDegistir(1));
             
-            // iOS UYUMLU DOĞAL TAKVİM SEÇİCİ
-            document.getElementById('gizliTakvim').addEventListener('change', (e) => tarihiGuncelle(e.target.value));
+            // HİBRİT TAKVİM SEÇİCİ (MASAÜSTÜ + MOBİL)
+            const gizliTakvim = document.getElementById('gizliTakvim');
+            gizliTakvim.addEventListener('change', (e) => tarihiGuncelle(e.target.value));
+
+            gizliTakvim.addEventListener('click', function() {
+                try {
+                    this.showPicker();
+                } catch (err) {
+                    // iOS için boş bırakıldı (Zaten şeffaf input Apple'ın kendi takvimini açacak)
+                }
+            });
 
             document.querySelectorAll('input[name="cinsiyetSecim"]').forEach(radio => {
                 radio.addEventListener('change', function() {
@@ -690,26 +697,23 @@ if (token) {
                     let mevcutKayit = kayitMap[`${saat}_${kort}`];
                     if (mevcutKayit) {
                         let td = document.createElement('td');
-                        if (window.aktifRol === 'uzman' && mevcutKayit.notlar !== window.aktifKullanici) {
-                            td.style.backgroundColor = "#e9ecef"; td.style.cursor = "not-allowed";
-                            td.innerHTML = `<div class="d-flex flex-column justify-content-center align-items-center h-100 opacity-50"><i class="fa-solid fa-lock mb-1"></i><span class="fw-bold small">Dolu</span></div>`;
-                            td.addEventListener('click', () => Swal.fire('Gizli Bilgi', 'Bu seans başka bir uzmana aittir.', 'warning'));
-                        } else {
-                            td.className = 'cell-full shadow-sm';
-                            
-                            let bgClass = "";
-                            if(kort===1) bgClass = "border-start border-4 border-info";
-                            if(kort===2) bgClass = "border-start border-4 border-primary";
-                            if(kort===3) bgClass = "border-start border-4 border-warning";
-                            if(kort===4) bgClass = "border-start border-4 border-danger"; 
-                            
-                            const duzgunIsim = isimFormatla(mevcutKayit.kisiAdi);
-                            
-                            // UZMAN İSİM FORMATLAMA
-                            td.innerHTML = `<div class="h-100 w-100 p-1 ${bgClass}"><span class="rez-name d-block fw-bold text-dark">${duzgunIsim}</span><span class="rez-teacher text-muted d-block small"><i class="fa-solid fa-user-tie me-1"></i>${uzmanFormatla(mevcutKayit.notlar)}</span><span class="rez-note d-block small" style="color: var(--manu-teal);"><i class="fa-solid fa-leaf me-1"></i>${mevcutKayit.rezervasyonTuru}</span></div>`;
-                            
-                            td.addEventListener('click', () => window.detayModalAc(mevcutKayit, kort, saat));
-                        }
+                        
+                        // UZMAN ROLÜ İÇİN KISITLAMALAR KALDIRILDI. ARTIK HERKES DETAY GÖREBİLİR VE DÜZENLEYEBİLİR.
+                        td.className = 'cell-full shadow-sm';
+                        
+                        let bgClass = "";
+                        if(kort===1) bgClass = "border-start border-4 border-info";
+                        if(kort===2) bgClass = "border-start border-4 border-primary";
+                        if(kort===3) bgClass = "border-start border-4 border-warning";
+                        if(kort===4) bgClass = "border-start border-4 border-danger"; 
+                        
+                        const duzgunIsim = isimFormatla(mevcutKayit.kisiAdi);
+                        
+                        // UZMAN İSİM FORMATLAMA
+                        td.innerHTML = `<div class="h-100 w-100 p-1 ${bgClass}"><span class="rez-name d-block fw-bold text-dark">${duzgunIsim}</span><span class="rez-teacher text-muted d-block small"><i class="fa-solid fa-user-tie me-1"></i>${uzmanFormatla(mevcutKayit.notlar)}</span><span class="rez-note d-block small" style="color: var(--manu-teal);"><i class="fa-solid fa-leaf me-1"></i>${mevcutKayit.rezervasyonTuru}</span></div>`;
+                        
+                        td.addEventListener('click', () => window.detayModalAc(mevcutKayit, kort, saat));
+                        
                         tr.appendChild(td);
                     } else {
                         let td = document.createElement('td');
