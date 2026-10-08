@@ -116,7 +116,6 @@ if (token) {
                     </div>
                     <div class="d-flex align-items-center flex-wrap gap-2">
                         
-                        <!-- YENİ: YARININ HATIRLATMALARI BUTONU (Artık uzmanlar da görecek) -->
                         <button id="hatirlatmaBtn" class="btn btn-sm btn-success fw-bold shadow-sm" onclick="window.yarinHatirlatmalariAc()">
                             <i class="fa-brands fa-whatsapp"></i> Yarının Hatırlatmaları
                         </button>
@@ -125,19 +124,18 @@ if (token) {
                             <i class="fa-solid fa-key"></i> Şifre Değiştir
                         </button>
                         
-                        {aktifRol === 'yonetici' && (
-                            <a href="/ayarlar" class="btn btn-sm btn-secondary fw-bold shadow-sm">
-                                <i class="fa-solid fa-gear"></i> Ayarlar
-                            </a>
-                        )}
+                        <!-- AYARLAR BUTONU ARTIK UZMANLARA DA AÇIK -->
+                        <a href="/ayarlar" class="btn btn-sm btn-secondary fw-bold shadow-sm">
+                            <i class="fa-solid fa-gear"></i> Ayarlar
+                        </a>
 
+                        <!-- İSTATİSTİK SADECE YÖNETİCİDE KALDI -->
                         {aktifRol === 'yonetici' && (
                             <a href="/istatistik" class="btn btn-sm text-white fw-bold shadow-sm" style="background-color: var(--manu-teal-light);">
                                 <i class="fa-solid fa-chart-pie me-1"></i> İstatistik
                             </a>
                         )}
 
-                        <!-- Rehberi de uzmanlara açtık -->
                         <a href="/rehber" class="btn btn-sm btn-outline-dark fw-bold shadow-sm">
                             <i class="fa-solid fa-address-book" style="color: var(--manu-gold);"></i> Rehber
                         </a>
@@ -148,14 +146,13 @@ if (token) {
             <div class="container mt-3">
                 <div class="date-navigator shadow-sm rounded-4 bg-white mb-3">
                     <button type="button" id="dunBtn" class="date-btn text-muted"><i class="fa-solid fa-chevron-left"></i> Dün</button>
-                    <!-- YENİ iOS UYUMLU TARİH SEÇİCİ KUTUSU -->
+                    <!-- Hibrit Takvim (Masaüstü + Mobil) -->
                     <div style="position: relative; flex-grow: 1; text-align: center; cursor: pointer;" id="tarihSeciciAlan">
                         <h3 class="current-date" style="color: var(--manu-teal); position: relative; z-index: 1;">
                             <i class="fa-regular fa-calendar-days me-2"></i>
                             <span id="gosterilenTarih"></span>
                             <i class="fa-solid fa-caret-down ms-2" style="font-size: 0.8rem; opacity: 0.5;"></i>
                         </h3>
-                        <!-- Hem mobilde hem masaüstünde çalışan hibrit yapı -->
                         <input type="date" id="gizliTakvim" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 2; margin: 0; padding: 0;">
                     </div>
                     <button type="button" id="yarinBtn" class="date-btn text-muted">Yarın <i class="fa-solid fa-chevron-right"></i></button>
@@ -331,7 +328,6 @@ if (token) {
         return ilkKisim + ' ' + sonKelime;
     }
 
-    // --- UZMAN İSİMLERİNİ FORMATLAMA FONKSİYONU ---
     const uzmanIsimleri = {
         'huseyin': 'Hüseyin Hoca',
         'irem': 'İrem Hoca',
@@ -386,7 +382,7 @@ if (token) {
                 try {
                     this.showPicker();
                 } catch (err) {
-                    // iOS için boş bırakıldı (Zaten şeffaf input Apple'ın kendi takvimini açacak)
+                    // iOS için boş bırakıldı
                 }
             });
 
@@ -488,7 +484,6 @@ if (token) {
 
                     if (response.ok) {
                         
-                        // YENİ KAYITLARDA WHATSAPP AÇILIŞI (ONAY BİLDİRİMİ)
                         if (methodType === 'POST') {
                             const wpTel = guncelTel.replace(/\D/g, ''); 
                             if (wpTel.length >= 10) {
@@ -522,7 +517,6 @@ if (token) {
         }
     });
 
-    // YARININ HATIRLATMALARI FONKSİYONU
     window.yarinHatirlatmalariAc = async function() {
         const btn = document.getElementById('hatirlatmaBtn');
         if(btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Hazırlanıyor...';
@@ -542,7 +536,6 @@ if (token) {
             if (kayitlar.length === 0) {
                 listeDiv.innerHTML = '<div class="alert alert-secondary text-center py-4"><i class="fa-solid fa-bed fs-2 mb-2 d-block text-muted"></i>Yarın için kayıtlı hiçbir randevu bulunmuyor.</div>';
             } else {
-                // Kayıtları saate göre sırala (Sabah gelenler önce)
                 kayitlar.sort((a, b) => a.saat.localeCompare(b.saat));
 
                 let html = '<ul class="list-group list-group-flush border rounded-3 overflow-hidden shadow-sm">';
@@ -698,7 +691,6 @@ if (token) {
                     if (mevcutKayit) {
                         let td = document.createElement('td');
                         
-                        // UZMAN ROLÜ İÇİN KISITLAMALAR KALDIRILDI. ARTIK HERKES DETAY GÖREBİLİR VE DÜZENLEYEBİLİR.
                         td.className = 'cell-full shadow-sm';
                         
                         let bgClass = "";
@@ -709,7 +701,6 @@ if (token) {
                         
                         const duzgunIsim = isimFormatla(mevcutKayit.kisiAdi);
                         
-                        // UZMAN İSİM FORMATLAMA
                         td.innerHTML = `<div class="h-100 w-100 p-1 ${bgClass}"><span class="rez-name d-block fw-bold text-dark">${duzgunIsim}</span><span class="rez-teacher text-muted d-block small"><i class="fa-solid fa-user-tie me-1"></i>${uzmanFormatla(mevcutKayit.notlar)}</span><span class="rez-note d-block small" style="color: var(--manu-teal);"><i class="fa-solid fa-leaf me-1"></i>${mevcutKayit.rezervasyonTuru}</span></div>`;
                         
                         td.addEventListener('click', () => window.detayModalAc(mevcutKayit, kort, saat));
@@ -797,7 +788,6 @@ if (token) {
         document.getElementById('detayCinsiyet').innerText = kayit.cinsiyet === 'kadin' ? 'Kadın' : 'Erkek';
         document.getElementById('detayTur').innerText = kayit.rezervasyonTuru || '-';
         
-        // UZMAN İSİM FORMATLAMA
         document.getElementById('detayEkleyen').innerText = uzmanFormatla(kayit.notlar);
         
         document.getElementById('silinecekKayitId').value = kayit.id;
