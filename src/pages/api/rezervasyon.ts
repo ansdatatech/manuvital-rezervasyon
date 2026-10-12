@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../db';
 import { rezervasyonlar, musteriler } from '../../db/schema';
-import { eq, and, or } from 'drizzle-orm'; // <-- DİKKAT: 'or' eklendi
+import { eq, and, or } from 'drizzle-orm'; 
 import { jwtVerify } from 'jose';
 
 export const prerender = false;
@@ -64,7 +64,7 @@ export const GET: APIRoute = async ({ request, cookies }) => {
     }
 };
 
-// 2. KAYIT EKLEME (POST)
+// 2. KAYIT EKLEME (POST) - Panel Üzerinden Yapılan Kayıtlar (Anında Onaylı)
 export const POST: APIRoute = async ({ request, cookies }) => {
     const kimlik = await kimlikGetir(cookies);
     if (!kimlik) return new Response(JSON.stringify({ error: "Oturum süresi dolmuş." }), { status: 401 });
@@ -99,14 +99,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         for (let i = 0; i < haftaSayisi; i++) {
             const islenecekTarih = tarihEkle(body.tarih, i * 7);
 
-            // --- YENİ: UZMAN VE ODA ÇAKIŞMA KONTROLÜ ---
+            // --- UZMAN VE ODA ÇAKIŞMA KONTROLÜ ---
             const cakisiyorMu = await db.select().from(rezervasyonlar).where(
                 and(
                     eq(rezervasyonlar.tarih, islenecekTarih), 
                     eq(rezervasyonlar.saat, body.saat), 
                     or(
                         eq(rezervasyonlar.alanId, kortNo), // Eğer ODA doluysa
-                        eq(rezervasyonlar.notlar, uzmanKey) // VEYA bu saatte UZMAN (Erdoğan) başka odada doluysa
+                        eq(rezervasyonlar.notlar, uzmanKey) // VEYA bu saatte UZMAN başka odada doluysa
                     )
                 )
             ).limit(1);
@@ -124,7 +124,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
                 telefon: body.telefon, 
                 rezervasyonTuru: body.rezervasyonTuru,
                 cinsiyet: cinsiyet,
-                notlar: uzmanKey 
+                notlar: uzmanKey,
+                onayDurumu: 'onaylandi' // Panelden eklenenler direkt onaylıdır
             });
 
             basariliKayitSayisi++;
@@ -160,7 +161,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 };
 
-// 3. KAYIT DÜZENLEME (PUT)
+// 3. KAYIT DÜZENLEME (PUT) - Web Taleplerini Onaylama İşlemi de Buradan Geçer
 export const PUT: APIRoute = async ({ request, cookies }) => {
     const kimlik = await kimlikGetir(cookies);
     if (!kimlik) return new Response(JSON.stringify({ error: "Oturum süresi dolmuş." }), { status: 401 });
@@ -172,7 +173,7 @@ export const PUT: APIRoute = async ({ request, cookies }) => {
         if (guncellenecek.length === 0) return new Response(JSON.stringify({ error: "Kayıt bulunamadı!" }), { status: 404 });
         
         if (kimlik.rol === 'uzman' && guncellenecek[0].notlar !== kimlik.kullaniciAdi) {
-             return new Response(JSON.stringify({ error: "Sadece kendi oluşturduğunuz dersleri düzenleyebilirsiniz!" }), { status: 403 });
+             return new Response(JSON.stringify({ error: "Sadece kendi oluşturduğunuz veya size atanan dersleri düzenleyebilirsiniz!" }), { status: 403 });
         }
 
         const kortNo = parseInt(guncellenecek[0].alanId || 1);
@@ -183,8 +184,7 @@ export const PUT: APIRoute = async ({ request, cookies }) => {
             uzmanKey = (cinsiyet === 'kadin') ? 'muruvet' : 'erdogan';
         }
 
-        // --- YENİ EKLENEN UZMAN ÇAKIŞMA KONTROLÜ (DÜZENLEME İÇİN) ---
-        // Eğer cinsiyet değişirse ve uzman Mürüvet yerine Erdoğan (veya tam tersi) olursa:
+        // --- UZMAN ÇAKIŞMA KONTROLÜ (DÜZENLEME İÇİN) ---
         if (uzmanKey !== guncellenecek[0].notlar) {
             const baskaOdadaMesgulMu = await db.select().from(rezervasyonlar).where(
                 and(
@@ -198,14 +198,15 @@ export const PUT: APIRoute = async ({ request, cookies }) => {
                 return new Response(JSON.stringify({ error: "İşlem başarısız: Atanacak uzman bu saatte başka bir odada meşgul!" }), { status: 400 });
             }
         }
-        // ------------------------------------------------------------
 
+        // --- GÜNCELLEME İŞLEMİ (OnayDurumu da buradan güncelleniyor) ---
         await db.update(rezervasyonlar).set({
             kisiAdi: body.kisiAdi, 
             telefon: body.telefon, 
             rezervasyonTuru: body.rezervasyonTuru,
             cinsiyet: cinsiyet,
-            notlar: uzmanKey
+            notlar: uzmanKey,
+            onayDurumu: body.onayDurumu || guncellenecek[0].onayDurumu // <--- BURASI ÇOK ÖNEMLİ
         }).where(eq(rezervasyonlar.id, parseInt(body.id)));
 
         return new Response(JSON.stringify({ success: true }), { status: 200 });
@@ -214,7 +215,7 @@ export const PUT: APIRoute = async ({ request, cookies }) => {
     }
 };
 
-// 4. KAYIT SİLME (DELETE)
+// 4. KAYIT SİLME (DELETE) - Web Talebini Reddetme İşlemi de Buradan Geçer
 export const DELETE: APIRoute = async ({ request, cookies }) => {
     const kimlik = await kimlikGetir(cookies);
     if (!kimlik) return new Response(JSON.stringify({ error: "Oturum süresi dolmuş." }), { status: 401 });
@@ -229,12 +230,14 @@ export const DELETE: APIRoute = async ({ request, cookies }) => {
         const k = silinecekKayit[0];
 
         if (kimlik.rol === 'uzman' && k.notlar !== kimlik.kullaniciAdi) {
-            return new Response(JSON.stringify({ error: "Sadece kendi oluşturduğunuz dersleri iptal edebilirsiniz!" }), { status: 403 });
+            return new Response(JSON.stringify({ error: "Sadece kendi oluşturduğunuz veya size atanan dersleri silebilirsiniz/reddedebilirsiniz!" }), { status: 403 });
         }
 
         await db.delete(rezervasyonlar).where(eq(rezervasyonlar.id, parseInt(id)));
         
-        if (k.telefon) {
+        // Eğer zaten onaylanmış bir kayıtsa iptal edildiğinde mesaj gitsin
+        // Bekleyen (onaylanmamış) bir talep siliniyorsa (Reddetme) mesaj gitmesine gerek yok, zaten biz anında WhatsApp açıyoruz.
+        if (k.telefon && k.onayDurumu === 'onaylandi') {
             const iptalMetni = `Sayın ${k.kisiAdi}, ${k.tarih} tarihi saat ${k.saat} olan rezervasyonunuz iptal edilmiştir. - Manuvital`;
             await smsGonder(k.telefon, iptalMetni);
         }
