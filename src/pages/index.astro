@@ -38,7 +38,6 @@ if (token) {
         .th-oda-3 { background-color: var(--manu-gold) !important; color: white !important; border-bottom: 3px solid #b88a44 !important; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
         .th-oda-4 { background-color: var(--manu-hacamat) !important; color: white !important; border-bottom: 3px solid #5c2424 !important; }
         
-        /* TÜM SELECT KUTULARININ OK İŞARETLERİNİ TAMAMEN GİZLEME */
         select {
             -webkit-appearance: none !important;
             -moz-appearance: none !important;
@@ -46,9 +45,7 @@ if (token) {
             background-image: none !important;
         }
 
-        select::-ms-expand {
-            display: none !important;
-        }
+        select::-ms-expand { display: none !important; }
         
         select:disabled {
             background-color: #e9ecef !important;
@@ -110,43 +107,48 @@ if (token) {
             </nav>
             
             <div class="container mt-3">
-                <div class="d-flex flex-wrap justify-content-between align-items-center p-3 bg-white shadow-sm rounded-4 border-start border-4 gap-2" style="border-color: var(--manu-gold) !important;">
+                <div class="d-flex flex-wrap justify-content-between align-items-center p-3 bg-white shadow-sm rounded-4 border-start border-4 gap-2 mb-4" style="border-color: var(--manu-gold) !important;">
                     <div class="text-muted text-uppercase">
                         <i class="fa-solid fa-user-tie me-1" style="color: var(--manu-teal);"></i> <strong>{aktifRol}:</strong> {aktifKullanici}
                     </div>
                     <div class="d-flex align-items-center flex-wrap gap-2">
-                        
                         <button id="hatirlatmaBtn" class="btn btn-sm btn-success fw-bold shadow-sm" onclick="window.yarinHatirlatmalariAc()">
                             <i class="fa-brands fa-whatsapp"></i> Yarının Hatırlatmaları
                         </button>
-
                         <button class="btn btn-sm btn-outline-secondary fw-bold shadow-sm" onclick="new bootstrap.Modal(document.getElementById('sifreModal')).show()">
                             <i class="fa-solid fa-key"></i> Şifre Değiştir
                         </button>
-                        
-                        <!-- AYARLAR BUTONU ARTIK UZMANLARA DA AÇIK -->
                         <a href="/ayarlar" class="btn btn-sm btn-secondary fw-bold shadow-sm">
                             <i class="fa-solid fa-gear"></i> Ayarlar
                         </a>
-
-                        <!-- İSTATİSTİK SADECE YÖNETİCİDE KALDI -->
                         {aktifRol === 'yonetici' && (
                             <a href="/istatistik" class="btn btn-sm text-white fw-bold shadow-sm" style="background-color: var(--manu-teal-light);">
                                 <i class="fa-solid fa-chart-pie me-1"></i> İstatistik
                             </a>
                         )}
-
                         <a href="/rehber" class="btn btn-sm btn-outline-dark fw-bold shadow-sm">
                             <i class="fa-solid fa-address-book" style="color: var(--manu-gold);"></i> Rehber
                         </a>
                     </div>
                 </div>
-            </div>
 
-            <div class="container mt-3">
+                <!-- YENİ: BEKLEYEN TALEPLER KUTUSU (WEB'DEN GELENLER) -->
+                <div id="bekleyenTaleplerKutusu" class="mb-4 d-none">
+                    <div class="card shadow-sm border-0 rounded-4" style="border-left: 5px solid #ffc107 !important;">
+                        <div class="card-header bg-white border-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
+                            <h5 class="fw-bold text-warning m-0"><i class="fa-solid fa-bell fa-shake me-2"></i>Web'den Gelen Yeni Talepler</h5>
+                            <span class="badge rounded-pill bg-warning text-dark fs-6 shadow-sm" id="bekleyenSayisi">0</span>
+                        </div>
+                        <div class="card-body p-0">
+                            <ul class="list-group list-group-flush rounded-bottom-4" id="bekleyenListe">
+                                <!-- JS İle Gelecek -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="date-navigator shadow-sm rounded-4 bg-white mb-3">
                     <button type="button" id="dunBtn" class="date-btn text-muted"><i class="fa-solid fa-chevron-left"></i> Dün</button>
-                    <!-- Hibrit Takvim (Masaüstü + Mobil) -->
                     <div style="position: relative; flex-grow: 1; text-align: center; cursor: pointer;" id="tarihSeciciAlan">
                         <h3 class="current-date" style="color: var(--manu-teal); position: relative; z-index: 1;">
                             <i class="fa-regular fa-calendar-days me-2"></i>
@@ -185,7 +187,7 @@ if (token) {
                 </div>
             </div>
             
-            <!-- RANDEVU EKLEME MODALI -->
+            <!-- Modal, Şifre Değiştir, Detay vs. (Birebir Aynı Bıraktık) -->
             <div class="modal fade" id="rezModal" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content rounded-4 border-0 shadow-lg">
@@ -206,8 +208,7 @@ if (token) {
                                 
                                 <div class="mb-3 p-3 bg-light rounded-3 border border-secondary border-opacity-25">
                                     <label class="form-label fw-bold text-dark small mb-2">Terapi / İşlem Türü</label>
-                                    <select id="kayitTuru" class="form-select border-secondary fw-bold text-secondary">
-                                    </select>
+                                    <select id="kayitTuru" class="form-select border-secondary fw-bold text-secondary"></select>
                                 </div>
 
                                 <div class="mb-3 p-3 bg-light rounded-3 border border-secondary border-opacity-25">
@@ -226,8 +227,7 @@ if (token) {
 
                                 <div class="mb-3 position-relative">
                                     <label class="form-label fw-bold text-muted small">Hizmeti Verecek Uzman</label>
-                                    <select id="kayitUzman" class="form-select form-control-lg bg-light fw-bold" style="border-color: var(--manu-teal);">
-                                    </select>
+                                    <select id="kayitUzman" class="form-select form-control-lg bg-light fw-bold" style="border-color: var(--manu-teal);"></select>
                                 </div>
 
                                 <div class="mb-3 position-relative">
@@ -250,7 +250,6 @@ if (token) {
                 </div>
             </div>
 
-            <!-- RANDEVU DETAY MODALI -->
             <div class="modal fade" id="detayModal" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content rounded-4 border-0 shadow-lg">
@@ -284,7 +283,6 @@ if (token) {
                 </div>
             </div>
 
-            <!-- 1 GÜN ÖNCESİ HATIRLATMA MODALI -->
             <div class="modal fade" id="hatirlatmaModal" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
                     <div class="modal-content rounded-4 border-0 shadow-lg">
@@ -294,14 +292,12 @@ if (token) {
                         </div>
                         <div class="modal-body p-4 bg-light">
                             <p class="text-muted small mb-3">Tarih: <strong id="hatirlatmaTarih" class="text-dark"></strong>. Listeden "Gönder" tuşuna basarak WhatsApp penceresini açabilirsiniz.</p>
-                            <div id="hatirlatmaListesi">
-                                <!-- Liste buraya yüklenecek -->
-                            </div>
+                            <div id="hatirlatmaListesi"></div>
                         </div>
                     </div>
                 </div>
             </div>
-
+            
         </div>
     )}
 </Layout>
@@ -374,16 +370,11 @@ if (token) {
             document.getElementById('dunBtn').addEventListener('click', () => tarihDegistir(-1));
             document.getElementById('yarinBtn').addEventListener('click', () => tarihDegistir(1));
             
-            // HİBRİT TAKVİM SEÇİCİ (MASAÜSTÜ + MOBİL)
             const gizliTakvim = document.getElementById('gizliTakvim');
             gizliTakvim.addEventListener('change', (e) => tarihiGuncelle(e.target.value));
 
             gizliTakvim.addEventListener('click', function() {
-                try {
-                    this.showPicker();
-                } catch (err) {
-                    // iOS için boş bırakıldı
-                }
+                try { this.showPicker(); } catch (err) {}
             });
 
             document.querySelectorAll('input[name="cinsiyetSecim"]').forEach(radio => {
@@ -406,7 +397,6 @@ if (token) {
                     let val = e.target.value.replace(/\D/g, ''); 
                     if (val.length > 0 && val[0] !== '0') val = '0' + val; 
                     if (val.length > 1 && val[1] !== '5') val = val.substring(0, 1) + '5' + val.substring(2); 
-                    
                     let res = '';
                     if (val.length > 0) res += val.substring(0, 4); 
                     if (val.length > 4) res += ' ' + val.substring(4, 7); 
@@ -453,10 +443,7 @@ if (token) {
                 const btn = document.getElementById('kaydetBtn');
                 
                 const guncelTel = document.getElementById('kayitTelefon').value;
-                if(guncelTel && guncelTel.length < 14) {
-                    alert("Lütfen numarayı eksiksiz giriniz.\nÖrn: 0532 123 45 67");
-                    return;
-                }
+                if(guncelTel && guncelTel.length < 14) { alert("Lütfen numarayı eksiksiz giriniz."); return; }
 
                 btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> İŞLENİYOR...';
 
@@ -466,44 +453,37 @@ if (token) {
                 const secilenCinsiyet = document.querySelector('input[name="cinsiyetSecim"]:checked').value;
 
                 try {
+                    const payloadObj = { 
+                        id: editId,
+                        kortNo: document.getElementById('kayitKort').value, 
+                        tarih: window.isoTarihFormat, 
+                        saat: document.getElementById('kayitSaat').value, 
+                        kisiAdi: finalIsim, 
+                        telefon: guncelTel, 
+                        rezervasyonTuru: document.getElementById('kayitTuru').value, 
+                        cinsiyet: secilenCinsiyet,
+                        ekleyen: document.getElementById('kayitUzman').value,
+                        onayDurumu: 'onaylandi'
+                    };
+
                     const response = await fetch('/api/rezervasyon', {
                         method: methodType,
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            id: editId,
-                            kortNo: document.getElementById('kayitKort').value, 
-                            tarih: window.isoTarihFormat, 
-                            saat: document.getElementById('kayitSaat').value, 
-                            kisiAdi: finalIsim, 
-                            telefon: guncelTel, 
-                            rezervasyonTuru: document.getElementById('kayitTuru').value, 
-                            cinsiyet: secilenCinsiyet,
-                            ekleyen: document.getElementById('kayitUzman').value 
-                        })
+                        body: JSON.stringify(payloadObj)
                     });
 
                     if (response.ok) {
-                        
                         if (methodType === 'POST') {
                             const wpTel = guncelTel.replace(/\D/g, ''); 
                             if (wpTel.length >= 10) {
                                 const trNumara = wpTel.startsWith('0') ? '9' + wpTel : '90' + wpTel;
                                 const [yil, ay, gun] = window.isoTarihFormat.split('-');
-                                const trTarih = `${gun}.${ay}.${yil}`;
-                                const kayitSaat = document.getElementById('kayitSaat').value;
-                                const islemTuru = document.getElementById('kayitTuru').value;
-                                
-                                const wpMesaj = `Sayın ${finalIsim},\n\n${trTarih} tarihi saat ${kayitSaat} için Manuvital Terapi Merkezi'nde ${islemTuru} randevunuz oluşturulmuştur.\n\n📍 Konum: https://rezervasyon.manuvital.com/konum\n\nSağlıklı günler dileriz.`;
-                                
+                                const wpMesaj = `Sayın ${finalIsim},\n\n${gun}.${ay}.${yil} tarihi saat ${document.getElementById('kayitSaat').value} için Manuvital Terapi Merkezi'nde ${document.getElementById('kayitTuru').value} randevunuz oluşturulmuştur.\n\n📍 Konum: https://rezervasyon.manuvital.com/konum\n\nSağlıklı günler dileriz.`;
                                 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                                const wpUrl = isMobile 
-                                    ? `https://api.whatsapp.com/send?phone=${trNumara}&text=${encodeURIComponent(wpMesaj)}`
-                                    : `https://web.whatsapp.com/send?phone=${trNumara}&text=${encodeURIComponent(wpMesaj)}`;
-                                
+                                const wpUrl = isMobile ? `https://api.whatsapp.com/send?phone=${trNumara}&text=${encodeURIComponent(wpMesaj)}` : `https://web.whatsapp.com/send?phone=${trNumara}&text=${encodeURIComponent(wpMesaj)}`;
                                 window.open(wpUrl, '_blank');
                             }
                         }
-
                         if(window.myModal) window.myModal.hide();
                         await tabloyuCiz();
                         if(typeof Swal !== 'undefined') Swal.fire({ title: 'Başarılı!', text: editId ? 'Kayıt güncellendi.' : 'Kayıt eklendi.', icon: 'success', timer: 1500, showConfirmButton: false });
@@ -517,6 +497,114 @@ if (token) {
         }
     });
 
+    // YENİ: WEB'DEN GELEN BEKLEYEN TALEPLERİ ÇEKME FONKSİYONU
+    window.bekleyenTalepleriGetir = async function() {
+        try {
+            const res = await fetch('/api/rezervasyon?tarih=hepsi');
+            if(!res.ok) return;
+            const tumKayitlar = await res.json();
+            
+            let bekleyenler = tumKayitlar.filter(k => k.onayDurumu === 'bekliyor');
+            
+            if (window.aktifRol === 'uzman') {
+                bekleyenler = bekleyenler.filter(k => k.notlar === window.aktifKullanici);
+            }
+
+            const kutu = document.getElementById('bekleyenTaleplerKutusu');
+            const liste = document.getElementById('bekleyenListe');
+            document.getElementById('bekleyenSayisi').innerText = bekleyenler.length;
+
+            if (bekleyenler.length === 0) {
+                kutu.classList.add('d-none');
+                return;
+            }
+
+            kutu.classList.remove('d-none');
+            liste.innerHTML = '';
+            
+            bekleyenler.sort((a, b) => new Date(a.tarih + 'T' + a.saat) - new Date(b.tarih + 'T' + b.saat));
+
+            bekleyenler.forEach(k => {
+                const [yil, ay, gun] = k.tarih.split('-');
+                const trTarih = `${gun}.${ay}.${yil}`;
+                const kayitJson = encodeURIComponent(JSON.stringify(k));
+
+                liste.innerHTML += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center p-3 hover-bg-light" style="background-color: #fffaf0;">
+                        <div>
+                            <h6 class="mb-1 fw-bold text-dark">${isimFormatla(k.kisiAdi)} <span class="badge bg-light text-dark border ms-2">${k.telefon}</span></h6>
+                            <p class="mb-0 text-muted small">
+                                <i class="fa-regular fa-calendar-check me-1" style="color: var(--manu-teal);"></i> ${trTarih} | <i class="fa-regular fa-clock mx-1" style="color: var(--manu-gold);"></i> <strong class="text-dark">${k.saat}</strong> 
+                                <span class="ms-2 badge bg-secondary opacity-75">${uzmanFormatla(k.notlar)}</span>
+                            </p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-success fw-bold px-3 shadow-sm" onclick="talepOnayla('${kayitJson}')">
+                                <i class="fa-solid fa-check"></i> Onayla
+                            </button>
+                            <button class="btn btn-sm btn-danger fw-bold px-3 shadow-sm" onclick="talepReddet('${kayitJson}')">
+                                <i class="fa-solid fa-xmark"></i> Reddet
+                            </button>
+                        </div>
+                    </li>
+                `;
+            });
+        } catch(e) {}
+    };
+
+    window.talepOnayla = async function(kayitStr) {
+        const kayit = JSON.parse(decodeURIComponent(kayitStr));
+        if(!confirm(`${isimFormatla(kayit.kisiAdi)} adlı kişinin ${kayit.saat} randevusunu ONAYLAMAK istiyor musunuz?`)) return;
+
+        try {
+            const response = await fetch('/api/rezervasyon', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    id: kayit.id, kortNo: kayit.alanId, tarih: kayit.tarih, saat: kayit.saat, 
+                    kisiAdi: kayit.kisiAdi, telefon: kayit.telefon, rezervasyonTuru: kayit.rezervasyonTuru, 
+                    cinsiyet: kayit.cinsiyet, ekleyen: kayit.notlar, onayDurumu: 'onaylandi' 
+                })
+            });
+
+            if (response.ok) {
+                const wpTel = kayit.telefon.replace(/\D/g, ''); 
+                if (wpTel.length >= 10) {
+                    const trNumara = wpTel.startsWith('0') ? '9' + wpTel : '90' + wpTel;
+                    const [yil, ay, gun] = kayit.tarih.split('-');
+                    const wpMesaj = `Sayın ${isimFormatla(kayit.kisiAdi)},\n\n${gun}.${ay}.${yil} tarihi saat ${kayit.saat} için oluşturduğunuz Manuvital Terapi Merkezi rezervasyon talebiniz ONAYLANMIŞTIR.\n\n📍 Konum: https://rezervasyon.manuvital.com/konum\n\nSağlıklı günler dileriz.`;
+                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                    const wpUrl = isMobile ? `https://api.whatsapp.com/send?phone=${trNumara}&text=${encodeURIComponent(wpMesaj)}` : `https://web.whatsapp.com/send?phone=${trNumara}&text=${encodeURIComponent(wpMesaj)}`;
+                    window.open(wpUrl, '_blank');
+                }
+                bekleyenTalepleriGetir();
+                tabloyuCiz();
+            } else alert("Onaylanırken bir hata oluştu.");
+        } catch (err) { alert("Sunucuya bağlanılamadı."); }
+    };
+
+    window.talepReddet = async function(kayitStr) {
+        const kayit = JSON.parse(decodeURIComponent(kayitStr));
+        if(!confirm(`${isimFormatla(kayit.kisiAdi)} adlı kişinin talebini SİLMEK istediğinize emin misiniz?`)) return;
+
+        try {
+            const response = await fetch(`/api/rezervasyon?id=${kayit.id}`, { method: 'DELETE' });
+            if (response.ok) {
+                const wpTel = kayit.telefon.replace(/\D/g, ''); 
+                if (wpTel.length >= 10) {
+                    const trNumara = wpTel.startsWith('0') ? '9' + wpTel : '90' + wpTel;
+                    const [yil, ay, gun] = kayit.tarih.split('-');
+                    const wpMesaj = `Sayın ${isimFormatla(kayit.kisiAdi)},\n\nÜzgünüz, Manuvital Terapi Merkezi ${gun}.${ay}.${yil} tarihi saat ${kayit.saat} için oluşturduğunuz randevu talebiniz sistemdeki çakışma/yoğunluk nedeniyle onaylanamamıştır. Anlayışınız için teşekkür ederiz.`;
+                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                    const wpUrl = isMobile ? `https://api.whatsapp.com/send?phone=${trNumara}&text=${encodeURIComponent(wpMesaj)}` : `https://web.whatsapp.com/send?phone=${trNumara}&text=${encodeURIComponent(wpMesaj)}`;
+                    window.open(wpUrl, '_blank');
+                }
+                bekleyenTalepleriGetir();
+                tabloyuCiz();
+            } else alert("Silinirken bir hata oluştu.");
+        } catch(e) { alert("Sunucuya bağlanılamadı."); }
+    };
+
     window.yarinHatirlatmalariAc = async function() {
         const btn = document.getElementById('hatirlatmaBtn');
         if(btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Hazırlanıyor...';
@@ -528,7 +616,9 @@ if (token) {
             const yarinTr = yarin.toLocaleDateString('tr-TR');
 
             const res = await fetch(`/api/rezervasyon?tarih=${yarinIso}`);
-            const kayitlar = await res.json();
+            let kayitlar = await res.json();
+            
+            kayitlar = kayitlar.filter(k => k.onayDurumu === 'onaylandi' || !k.onayDurumu);
 
             const listeDiv = document.getElementById('hatirlatmaListesi');
             document.getElementById('hatirlatmaTarih').innerText = yarinTr;
@@ -537,48 +627,27 @@ if (token) {
                 listeDiv.innerHTML = '<div class="alert alert-secondary text-center py-4"><i class="fa-solid fa-bed fs-2 mb-2 d-block text-muted"></i>Yarın için kayıtlı hiçbir randevu bulunmuyor.</div>';
             } else {
                 kayitlar.sort((a, b) => a.saat.localeCompare(b.saat));
-
                 let html = '<ul class="list-group list-group-flush border rounded-3 overflow-hidden shadow-sm">';
                 kayitlar.forEach(k => {
                     const wpTel = k.telefon ? k.telefon.replace(/\D/g, '') : '';
                     if (wpTel.length >= 10) {
                         const trNumara = wpTel.startsWith('0') ? '9' + wpTel : '90' + wpTel;
                         const mesaj = `Sayın ${k.kisiAdi},\n\nHatırlatma: Yarın (${yarinTr}) saat ${k.saat} için Manuvital Terapi Merkezi'nde ${k.rezervasyonTuru} randevunuz bulunmaktadır.\n\n📍 Konum: https://rezervasyon.manuvital.com/konum\n\nSağlıklı günler dileriz.`;
-                        
                         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                        const wpUrl = isMobile 
-                            ? `https://api.whatsapp.com/send?phone=${trNumara}&text=${encodeURIComponent(mesaj)}`
-                            : `https://web.whatsapp.com/send?phone=${trNumara}&text=${encodeURIComponent(mesaj)}`;
-
-                        html += `
-                            <li class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                <div>
-                                    <strong class="d-block text-dark fs-6">${k.kisiAdi}</strong>
-                                    <small class="text-muted fw-bold"><i class="fa-regular fa-clock me-1" style="color: var(--manu-teal);"></i> ${k.saat} - <span class="fw-normal">${k.rezervasyonTuru}</span></small>
-                                </div>
-                                <a href="${wpUrl}" target="_blank" class="btn btn-sm btn-success fw-bold px-3 py-2 rounded-pill shadow-sm" style="transition: all 0.2s;" onclick="this.innerHTML='<i class=\\'fa-solid fa-check me-1\\'></i> Gönderildi'; this.classList.remove('btn-success'); this.classList.add('btn-outline-secondary', 'disabled');">
-                                    <i class="fa-brands fa-whatsapp me-1 fs-6"></i> Gönder
-                                </a>
-                            </li>
-                        `;
+                        const wpUrl = isMobile ? `https://api.whatsapp.com/send?phone=${trNumara}&text=${encodeURIComponent(mesaj)}` : `https://web.whatsapp.com/send?phone=${trNumara}&text=${encodeURIComponent(mesaj)}`;
+                        html += `<li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <div><strong class="d-block text-dark fs-6">${k.kisiAdi}</strong><small class="text-muted fw-bold"><i class="fa-regular fa-clock me-1"></i> ${k.saat} - <span class="fw-normal">${k.rezervasyonTuru}</span></small></div>
+                                    <a href="${wpUrl}" target="_blank" class="btn btn-sm btn-success fw-bold px-3 py-2 rounded-pill shadow-sm" onclick="this.innerHTML='<i class=\\'fa-solid fa-check me-1\\'></i> Gönderildi'; this.classList.remove('btn-success'); this.classList.add('btn-outline-secondary', 'disabled');"><i class="fa-brands fa-whatsapp me-1 fs-6"></i> Gönder</a>
+                                </li>`;
                     } else {
-                        html += `
-                            <li class="list-group-item d-flex justify-content-between align-items-center py-3 bg-light">
-                                <div>
-                                    <strong class="d-block text-secondary">${k.kisiAdi}</strong>
-                                    <small class="text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation me-1"></i> Geçerli telefon yok</small>
-                                </div>
-                            </li>
-                        `;
+                        html += `<li class="list-group-item d-flex justify-content-between align-items-center py-3 bg-light"><div><strong class="d-block text-secondary">${k.kisiAdi}</strong><small class="text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation me-1"></i> Geçerli telefon yok</small></div></li>`;
                     }
                 });
                 html += '</ul>';
                 listeDiv.innerHTML = html;
             }
-
             if(btn) btn.innerHTML = '<i class="fa-brands fa-whatsapp"></i> Yarının Hatırlatmaları';
             new bootstrap.Modal(document.getElementById('hatirlatmaModal')).show();
-
         } catch(err) {
             alert("Hatırlatma verileri çekilemedi.");
             if(btn) btn.innerHTML = '<i class="fa-brands fa-whatsapp"></i> Yarının Hatırlatmaları';
@@ -590,22 +659,21 @@ if (token) {
             window.myModal = new bootstrap.Modal(document.getElementById('rezModal'));
             window.detayModal = new bootstrap.Modal(document.getElementById('detayModal'));
         }
-
         try {
             const res = await fetch('/api/ayarlar-api');
             if(res.ok) {
                 const ayar = await res.json();
-                const baslangic = parseInt(ayar.baslangicSaati);
-                const bitis = parseInt(ayar.bitisSaati);
                 window.saatler = [];
-                for(let i = baslangic; i <= bitis; i++) {
+                for(let i = parseInt(ayar.baslangicSaati); i <= parseInt(ayar.bitisSaati); i++) {
                     window.saatler.push(i.toString().padStart(2, '0') + ":00");
                 }
             }
-        } catch(err) {
-            window.saatler = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00"];
-        }
+        } catch(err) { window.saatler = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00"]; }
+        
         tarihiGuncelle(`${window.guncelTarih.getFullYear()}-${String(window.guncelTarih.getMonth() + 1).padStart(2, '0')}-${String(window.guncelTarih.getDate()).padStart(2, '0')}`);
+        
+        // BAŞLANGIÇTA BEKLEYEN TALEPLERİ ÇEK
+        bekleyenTalepleriGetir();
     }
 
     function tarihDegistir(gf) { window.guncelTarih.setDate(window.guncelTarih.getDate() + gf); tarihiGuncelle(`${window.guncelTarih.getFullYear()}-${String(window.guncelTarih.getMonth() + 1).padStart(2, '0')}-${String(window.guncelTarih.getDate()).padStart(2, '0')}`); }
@@ -623,15 +691,10 @@ if (token) {
     async function tabloyuCiz() {
         const tbody = document.getElementById('tabloGövdesi');
         if(!tbody) return;
-        
         tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-muted fw-bold"><i class="fa-solid fa-spinner fa-spin me-2" style="color: var(--manu-teal);"></i>Takvim Çiziliyor...</td></tr>`;
         
         try {
-            const [rezRes, izinRes] = await Promise.all([
-                fetch(`/api/rezervasyon?tarih=${window.isoTarihFormat}`),
-                fetch('/api/izinler')
-            ]);
-            
+            const [rezRes, izinRes] = await Promise.all([ fetch(`/api/rezervasyon?tarih=${window.isoTarihFormat}`), fetch('/api/izinler') ]);
             const dbKayitlar = await rezRes.json();
             const kapaliKuralListesi = await izinRes.json();
             
@@ -662,27 +725,18 @@ if (token) {
                 tr.innerHTML = `<td class="time-cell">${saat}</td>`;
                 
                 for (let kort = 1; kort <= window.alanSayisi; kort++) {
-                    
                     let kortKapaliSebep = null;
                     if (window.gunlukIzindekiler.includes('TUM')) kortKapaliSebep = aktifIzinler.find(i=>i.kapsam==='TUM').sebep;
                     else if (kort === 1 && window.gunlukIzindekiler.includes('huseyin')) kortKapaliSebep = aktifIzinler.find(i=>i.kapsam==='huseyin').sebep;
                     else if (kort === 2 && window.gunlukIzindekiler.includes('irem')) kortKapaliSebep = aktifIzinler.find(i=>i.kapsam==='irem').sebep;
                     else if (kort === 3 && window.gunlukIzindekiler.includes('erdogan')) kortKapaliSebep = aktifIzinler.find(i=>i.kapsam==='erdogan').sebep;
-                    else if (kort === 4 && window.gunlukIzindekiler.includes('erdogan') && window.gunlukIzindekiler.includes('muruvet')) {
-                        kortKapaliSebep = "Tüm Hacamat Uzmanları İzinli";
-                    }
+                    else if (kort === 4 && window.gunlukIzindekiler.includes('erdogan') && window.gunlukIzindekiler.includes('muruvet')) kortKapaliSebep = "Tüm Hacamat Uzmanları İzinli";
 
                     if (kortKapaliSebep) {
                         let td = document.createElement('td');
                         td.className = 'cell-closed shadow-sm';
-                        td.innerHTML = `<div class="h-100 w-100 d-flex flex-column justify-content-center align-items-center opacity-75">
-                                            <i class="fa-solid fa-plane-slash mb-1 fs-5"></i>
-                                            <span class="closed-title text-dark">${kortKapaliSebep}</span>
-                                        </div>`;
-                        td.addEventListener('click', () => {
-                            if(typeof Swal !== 'undefined') Swal.fire('İşlem Engellendi', `Bu alan şu sebeple kapalıdır: <b>${kortKapaliSebep}</b>`, 'warning');
-                            else alert(`Bu alan kapalı: ${kortKapaliSebep}`);
-                        });
+                        td.innerHTML = `<div class="h-100 w-100 d-flex flex-column justify-content-center align-items-center opacity-75"><i class="fa-solid fa-plane-slash mb-1 fs-5"></i><span class="closed-title text-dark">${kortKapaliSebep}</span></div>`;
+                        td.addEventListener('click', () => { alert(`Bu alan kapalı: ${kortKapaliSebep}`); });
                         tr.appendChild(td);
                         continue; 
                     }
@@ -690,7 +744,6 @@ if (token) {
                     let mevcutKayit = kayitMap[`${saat}_${kort}`];
                     if (mevcutKayit) {
                         let td = document.createElement('td');
-                        
                         td.className = 'cell-full shadow-sm';
                         
                         let bgClass = "";
@@ -700,10 +753,16 @@ if (token) {
                         if(kort===4) bgClass = "border-start border-4 border-danger"; 
                         
                         const duzgunIsim = isimFormatla(mevcutKayit.kisiAdi);
-                        
-                        td.innerHTML = `<div class="h-100 w-100 p-1 ${bgClass}"><span class="rez-name d-block fw-bold text-dark">${duzgunIsim}</span><span class="rez-teacher text-muted d-block small"><i class="fa-solid fa-user-tie me-1"></i>${uzmanFormatla(mevcutKayit.notlar)}</span><span class="rez-note d-block small" style="color: var(--manu-teal);"><i class="fa-solid fa-leaf me-1"></i>${mevcutKayit.rezervasyonTuru}</span></div>`;
-                        
-                        td.addEventListener('click', () => window.detayModalAc(mevcutKayit, kort, saat));
+
+                        // YENİ: BEKLEYEN KAYITLAR SOLUK VE BELİRGİN GÖRÜNSÜN
+                        if (mevcutKayit.onayDurumu === 'bekliyor') {
+                            td.className = 'cell-full shadow-sm opacity-50';
+                            bgClass = "border-start border-4 border-warning bg-warning bg-opacity-10";
+                            td.innerHTML = `<div class="h-100 w-100 p-1 ${bgClass}"><span class="rez-name d-block fw-bold text-dark">${duzgunIsim}</span><span class="rez-teacher text-danger d-block small mt-1 fw-bold"><i class="fa-solid fa-hourglass-half me-1"></i>ONAY BEKLİYOR</span></div>`;
+                        } else {
+                            td.innerHTML = `<div class="h-100 w-100 p-1 ${bgClass}"><span class="rez-name d-block fw-bold text-dark">${duzgunIsim}</span><span class="rez-teacher text-muted d-block small"><i class="fa-solid fa-user-tie me-1"></i>${uzmanFormatla(mevcutKayit.notlar)}</span><span class="rez-note d-block small" style="color: var(--manu-teal);"><i class="fa-solid fa-leaf me-1"></i>${mevcutKayit.rezervasyonTuru}</span></div>`;
+                            td.addEventListener('click', () => window.detayModalAc(mevcutKayit, kort, saat));
+                        }
                         
                         tr.appendChild(td);
                     } else {
@@ -714,10 +773,7 @@ if (token) {
                             td.style.cursor = "not-allowed";
                             td.style.backgroundColor = "#f8f9fa";
                             td.innerHTML = `<div class="w-100 h-100 d-flex justify-content-center align-items-center opacity-25"><i class="fa-solid fa-ban text-muted"></i></div>`;
-                            td.addEventListener('click', () => {
-                                if(typeof Swal !== 'undefined') Swal.fire('İşlem Engellendi', 'Geçmiş tarihlere yeni kayıt eklenemez.', 'error');
-                                else alert('Geçmiş tarihlere yeni kayıt eklenemez.');
-                            });
+                            td.addEventListener('click', () => { alert('Geçmiş tarihlere yeni kayıt eklenemez.'); });
                         } else {
                             let iconColor = kort === 4 ? "color: var(--manu-hacamat);" : "color: var(--manu-teal);";
                             td.innerHTML = `<button type="button" class="btn btn-sm btn-link p-0 w-100 h-100 shadow-none border-0" style="${iconColor}"><i class="fa-solid fa-plus fs-5"></i></button>`;
@@ -728,8 +784,7 @@ if (token) {
                 }
                 tbody.appendChild(tr);
             });
-
-        } catch (err) { tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation me-2"></i>Neon veritabanı bağlantı hatası!</td></tr>`; }
+        } catch (err) { tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation me-2"></i>Veritabanı bağlantı hatası!</td></tr>`; }
     }
 
     window.ekleModalAc = function(kortNo, saat) {
@@ -787,9 +842,7 @@ if (token) {
         document.getElementById('detayTel').innerText = kayit.telefon || 'Belirtilmemiş';
         document.getElementById('detayCinsiyet').innerText = kayit.cinsiyet === 'kadin' ? 'Kadın' : 'Erkek';
         document.getElementById('detayTur').innerText = kayit.rezervasyonTuru || '-';
-        
         document.getElementById('detayEkleyen').innerText = uzmanFormatla(kayit.notlar);
-        
         document.getElementById('silinecekKayitId').value = kayit.id;
         
         const simdi = new Date();
@@ -807,7 +860,6 @@ if (token) {
 
     window.kayitDuzenleModunaGec = function() {
         if(window.detayModal) window.detayModal.hide(); 
-
         const kayit = window.aktifIncelenenKayit;
         document.getElementById('editKayitId').value = kayit.id; 
         document.getElementById('kayitSaat').value = kayit.saat;
@@ -816,11 +868,8 @@ if (token) {
         document.getElementById('kayitAdi').value = isimFormatla(kayit.kisiAdi);
         document.getElementById('kayitTelefon').value = kayit.telefon || "";
         
-        if (kayit.cinsiyet === 'kadin') {
-            document.getElementById('cinsiyetKadin').checked = true;
-        } else {
-            document.getElementById('cinsiyetErkek').checked = true;
-        }
+        if (kayit.cinsiyet === 'kadin') document.getElementById('cinsiyetKadin').checked = true;
+        else document.getElementById('cinsiyetErkek').checked = true;
 
         const turSelect = document.getElementById('kayitTuru');
         const uzmanSelect = document.getElementById('kayitUzman');
@@ -831,21 +880,13 @@ if (token) {
         
         if (kortNo === 1 || kortNo === 2 || kortNo === 3) {
             turSelect.innerHTML = '<option value="Refleksoloji Masajı">Refleksoloji Masajı</option>';
-            turSelect.disabled = true; 
-            
             if (kortNo === 1) uzmanSelect.innerHTML = '<option value="huseyin">Hüseyin Hoca</option>';
             if (kortNo === 2) uzmanSelect.innerHTML = '<option value="irem">İrem Hoca</option>';
             if (kortNo === 3) uzmanSelect.innerHTML = '<option value="erdogan">Erdoğan Hoca</option>';
-        } 
-        else if (kortNo === 4) {
+        } else if (kortNo === 4) {
             turSelect.innerHTML = `<option value="Hacamat">Hacamat</option>`;
-            turSelect.disabled = true; 
-            
-            if (kayit.cinsiyet === 'kadin') {
-                uzmanSelect.innerHTML = '<option value="muruvet">Mürüvet Hoca</option>';
-            } else {
-                uzmanSelect.innerHTML = '<option value="erdogan">Erdoğan Hoca</option>';
-            }
+            if (kayit.cinsiyet === 'kadin') uzmanSelect.innerHTML = '<option value="muruvet">Mürüvet Hoca</option>';
+            else uzmanSelect.innerHTML = '<option value="erdogan">Erdoğan Hoca</option>';
         }
         
         const modalOdaIsimleri = ["ODA 1 (Hüseyin Hoca)", "ODA 2 (İrem Hoca)", "ODA 3 (Erdoğan Hoca)", "ODA 4 (Hacamat Odası)"];
@@ -872,18 +913,12 @@ if (token) {
                         if (wpTel.length >= 10) {
                             const trNumara = wpTel.startsWith('0') ? '9' + wpTel : '90' + wpTel;
                             const [yil, ay, gun] = kayit.tarih.split('-');
-                            
                             const iptalMesaji = `Sayın ${isimFormatla(kayit.kisiAdi)},\n\n${gun}.${ay}.${yil} tarihi saat ${kayit.saat} için Manuvital Terapi Merkezi'nde bulunan randevunuz iptal edilmiştir.\n\nSağlıklı günler dileriz.`;
-                            
                             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                            const wpLink = isMobile 
-                                ? `https://api.whatsapp.com/send?phone=${trNumara}&text=${encodeURIComponent(iptalMesaji)}`
-                                : `https://web.whatsapp.com/send?phone=${trNumara}&text=${encodeURIComponent(iptalMesaji)}`;
-                            
+                            const wpLink = isMobile ? `https://api.whatsapp.com/send?phone=${trNumara}&text=${encodeURIComponent(iptalMesaji)}` : `https://web.whatsapp.com/send?phone=${trNumara}&text=${encodeURIComponent(iptalMesaji)}`;
                             window.open(wpLink, '_blank');
                         }
                     }
-
                     if(window.detayModal) window.detayModal.hide();
                     await tabloyuCiz();
                 } else alert("Hata oluştu.");
